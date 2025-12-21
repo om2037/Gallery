@@ -51,15 +51,15 @@ class MainViewModel @Inject constructor(
                     FileLogger.log(application, "MainViewModel: Received new authorization state: ${it.javaClass.simpleName}")
                     when (it) {
                         is TdApi.AuthorizationStateReady -> {
+                            if (!sessionManager.isLoggedIn()) sessionManager.setLoggedIn(true)
                             _authState.value = AuthState.LoggedIn
                         }
-                        is TdApi.AuthorizationStateWaitTdlibParameters,
-                        is TdApi.AuthorizationStateWaitPhoneNumber,
-                        is TdApi.AuthorizationStateWaitCode,
                         is TdApi.AuthorizationStateClosed -> {
+                            sessionManager.setLoggedIn(false)
                             _authState.value = AuthState.LoggedOut
                         }
-                        // Potentially handle other states if needed, for now they do nothing
+                        // For other states (WaitPhoneNumber, WaitCode, etc.), we do nothing.
+                        // This prevents logging out the user during the login flow.
                     }
                 }
             } catch (e: Exception) {

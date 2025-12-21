@@ -39,6 +39,7 @@ class LoginViewModel @Inject constructor(
                     is TdApi.AuthorizationStateWaitPhoneNumber,
                     is TdApi.AuthorizationStateWaitTdlibParameters -> _uiState.value = LoginUiState.WaitingForPhoneNumber
                     is TdApi.AuthorizationStateClosed -> {
+                        sessionManager.setLoggedIn(false)
                         _uiState.value = LoginUiState.Error("Authentication failed")
                         FileLogger.log(application, "LoginViewModel: State is Closed. Authentication failed.")
                     }
