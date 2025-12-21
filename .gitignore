@@ -1,0 +1,28 @@
+# IDE files
+.idea/
+.gradle/
+build/
+*.iml
+
+# Local properties
+local.properties
+
+# Keystore files
+*.jks
+*.keystore
+
+# Log files
+*.log
+
+# APKs
+*.apk
+*.aab
+
+# Test reports
+/app/build/reports/
+
+# Lint reports
+/app/build/outputs/lint/
+
+# Captures
+.cxx/
