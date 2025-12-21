@@ -22,16 +22,22 @@ class TelegramClientImpl @Inject constructor(
     @ApplicationContext private val context: Context
 ) : TelegramClient {
 
-    private val client: Client = Client.create({ obj ->
-        if (obj is TdApi.UpdateAuthorizationState) {
-            _authorizationState.value = obj.authorizationState
-        }
-    }, null, null)
+    private lateinit var client: Client
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     private val _authorizationState = MutableStateFlow<TdApi.AuthorizationState?>(null)
+    private var isInitialized = false
 
-    init {
+    override suspend fun initialize() {
+        if (isInitialized) return
+        isInitialized = true
+
+        client = Client.create({ obj ->
+            if (obj is TdApi.UpdateAuthorizationState) {
+                _authorizationState.value = obj.authorizationState
+            }
+        }, null, null)
+
         client.send(TdApi.GetAuthorizationState()) {
             if (it is TdApi.AuthorizationState) {
                 _authorizationState.value = it

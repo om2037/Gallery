@@ -33,6 +33,22 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    fun checkInitialState() {
+        viewModelScope.launch {
+            if (sessionManager.isLoggedIn()) {
+                telegramClient.initialize()
+                telegramClient.getAuthorizationStateFlow().collect {
+                    if (it is TdApi.AuthorizationStateReady) {
+                        _authState.value = AuthState.LoggedIn
+                    } else if (it is TdApi.AuthorizationStateClosed) {
+                        _authState.value = AuthState.LoggedOut
+                        sessionManager.setLoggedIn(false)
+                    }
+                }
+            }
+        }
+    }
+
     fun saveSyncStartDate(dateMillis: Long?) {
         dateMillis?.let {
             sessionManager.saveSyncStartDate(it)
