@@ -18,6 +18,9 @@ import com.dark.cloud_gallery.ui.features.MainScreen
 import com.dark.cloud_gallery.ui.features.gallery.MediaDetailScreen
 import com.dark.cloud_gallery.ui.features.login.LoginScreen
 import com.dark.cloud_gallery.ui.features.login.OtpScreen
+import com.dark.cloud_gallery.ui.features.webview.WebViewScreen
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 
 @Composable
 fun Navigation(
@@ -44,10 +47,6 @@ fun Navigation(
                 composable("main") {
                     MainScreen(navController)
                 }
-import com.dark.cloud_gallery.ui.features.webview.WebViewScreen
-import java.net.URLEncoder
-import java.nio.charset.StandardCharsets
-
                 composable(
                     "mediaDetail/{mediaId}",
                     arguments = listOf(navArgument("mediaId") { type = NavType.LongType })

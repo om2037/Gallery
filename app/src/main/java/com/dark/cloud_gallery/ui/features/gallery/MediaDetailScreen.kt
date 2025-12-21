@@ -33,7 +33,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberPermissionState
-import com.k-g-a.zoomable.ZoomableImage
+import net.engawapg.lib.zoomable.rememberZoomState
+import net.engawapg.lib.zoomable.zoomable
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
 @Composable
@@ -45,6 +46,7 @@ fun MediaDetailScreen(
     val storagePermissionState = rememberPermissionState(Manifest.permission.WRITE_EXTERNAL_STORAGE)
     val downloadState by viewModel.downloadState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+    val zoomState = rememberZoomState()
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) }
@@ -55,10 +57,10 @@ fun MediaDetailScreen(
                     .fillMaxSize()
                     .padding(padding)
             ) {
-                ZoomableImage(
+                AsyncImage(
                     model = item.filePath,
                     contentDescription = null,
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier.fillMaxSize().zoomable(zoomState)
                 )
 
                 IconButton(
