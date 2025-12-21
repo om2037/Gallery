@@ -25,6 +25,9 @@ class MediaDetailViewModel @Inject constructor(
     private val _isBottomSheetVisible = MutableStateFlow(false)
     val isBottomSheetVisible = _isBottomSheetVisible.asStateFlow()
 
+    private val _downloadState = MutableStateFlow<DownloadState>(DownloadState.Idle)
+    val downloadState = _downloadState.asStateFlow()
+
     init {
         loadMediaItem()
     }
@@ -50,5 +53,19 @@ class MediaDetailViewModel @Inject constructor(
 
     fun hideBottomSheet() {
         _isBottomSheetVisible.value = false
+    }
+
+    fun downloadMediaItem() {
+        viewModelScope.launch {
+            _downloadState.value = DownloadState.InProgress
+            try {
+                _mediaItem.value?.let {
+                    mediaRepository.downloadMediaItem(it)
+                    _downloadState.value = DownloadState.Success
+                }
+            } catch (e: Exception) {
+                _downloadState.value = DownloadState.Error(e.message ?: "Unknown error")
+            }
+        }
     }
 }
