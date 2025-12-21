@@ -27,17 +27,23 @@ class MainViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            telegramClient.getAuthorizationStateFlow().collect {
-                when (it) {
-                    is TdApi.AuthorizationStateReady -> _authState.value = AuthState.LoggedIn
-                    is TdApi.AuthorizationStateWaitTdlibParameters,
-                    is TdApi.AuthorizationStateWaitPhoneNumber,
-                    is TdApi.AuthorizationStateWaitCode -> _authState.value = AuthState.LoggedOut
-                    is TdApi.AuthorizationStateClosed -> _authState.value = AuthState.LoggedOut
-                    // You might want to handle other states explicitly, e.g., logging out or showing errors
-                    else -> {
-                        // For any other unhandled state, assume logged out to be safe
-                        _authState.value = AuthState.LoggedOut
+            // First, check if we have the necessary credentials to even attempt to connect
+            if (sessionManager.getApiId().isNullOrBlank() || sessionManager.getApiHash().isNullOrBlank()) {
+                _authState.value = AuthState.LoggedOut
+            } else {
+                // If we have credentials, then we can proceed to check the Telegram client's state
+                telegramClient.getAuthorizationStateFlow().collect {
+                    when (it) {
+                        is TdApi.AuthorizationStateReady -> _authState.value = AuthState.LoggedIn
+                        is TdApi.AuthorizationStateWaitTdlibParameters,
+                        is TdApi.AuthorizationStateWaitPhoneNumber,
+                        is TdApi.AuthorizationStateWaitCode -> _authState.value = AuthState.LoggedOut
+                        is TdApi.AuthorizationStateClosed -> _authState.value = AuthState.LoggedOut
+                        // You might want to handle other states explicitly, e.g., logging out or showing errors
+                        else -> {
+                            // For any other unhandled state, assume logged out to be safe
+                            _authState.value = AuthState.LoggedOut
+                        }
                     }
                 }
             }
