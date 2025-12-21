@@ -22,13 +22,19 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import android.Manifest
+import android.os.Build
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.rememberMultiplePermissionsState
 
+@OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun LoginScreen(
     viewModel: LoginViewModel = hiltViewModel(),
@@ -39,6 +45,25 @@ fun LoginScreen(
     var apiHash by remember { mutableStateOf("") }
     var phoneNumber by remember { mutableStateOf("") }
     var channelId by remember { mutableStateOf("") }
+
+    val permissions = remember {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            listOf(
+                Manifest.permission.READ_MEDIA_IMAGES,
+                Manifest.permission.READ_MEDIA_VIDEO,
+                Manifest.permission.POST_NOTIFICATIONS
+            )
+        } else {
+            listOf(
+                Manifest.permission.READ_EXTERNAL_STORAGE
+            )
+        }
+    }
+    val permissionState = rememberMultiplePermissionsState(permissions = permissions)
+
+    LaunchedEffect(Unit) {
+        permissionState.launchMultiplePermissionRequest()
+    }
 
     LaunchedEffect(uiState) {
         if (uiState is LoginUiState.WaitingForCode) {
@@ -64,6 +89,7 @@ fun LoginScreen(
                 value = apiId,
                 onValueChange = { apiId = it },
                 label = { Text("API ID") },
+                enabled = permissionState.allPermissionsGranted,
                 modifier = Modifier
                     .fillMaxWidth()
                     .border(1.dp, Color.Gray, RectangleShape),
@@ -81,6 +107,7 @@ fun LoginScreen(
                 value = apiHash,
                 onValueChange = { apiHash = it },
                 label = { Text("API Hash") },
+                enabled = permissionState.allPermissionsGranted,
                 modifier = Modifier
                     .fillMaxWidth()
                     .border(1.dp, Color.Gray, RectangleShape),
@@ -98,6 +125,7 @@ fun LoginScreen(
                 value = phoneNumber,
                 onValueChange = { phoneNumber = it },
                 label = { Text("Phone Number") },
+                enabled = permissionState.allPermissionsGranted,
                 modifier = Modifier
                     .fillMaxWidth()
                     .border(1.dp, Color.Gray, RectangleShape),
@@ -115,6 +143,7 @@ fun LoginScreen(
                 value = channelId,
                 onValueChange = { channelId = it },
                 label = { Text("Channel ID") },
+                enabled = permissionState.allPermissionsGranted,
                 modifier = Modifier
                     .fillMaxWidth()
                     .border(1.dp, Color.Gray, RectangleShape),
@@ -132,6 +161,7 @@ fun LoginScreen(
                 onClick = {
                     viewModel.sendAuthCode(apiId, apiHash, phoneNumber, channelId)
                 },
+                enabled = permissionState.allPermissionsGranted,
                 modifier = Modifier.fillMaxWidth(),
                 shape = RectangleShape,
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
