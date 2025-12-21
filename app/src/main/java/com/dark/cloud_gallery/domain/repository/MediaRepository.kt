@@ -18,4 +18,8 @@ interface MediaRepository {
     suspend fun updateMediaItem(mediaItem: MediaItem)
 
     suspend fun downloadMediaItem(mediaItem: MediaItem)
+
+    fun getSmsBackups(): Flow<List<SmsBackup>>
+
+    suspend fun syncMediaItems()
 }

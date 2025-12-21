@@ -44,11 +44,22 @@ fun Navigation(
                 composable("main") {
                     MainScreen(navController)
                 }
+import com.dark.cloud_gallery.ui.features.webview.WebViewScreen
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
+
                 composable(
                     "mediaDetail/{mediaId}",
                     arguments = listOf(navArgument("mediaId") { type = NavType.LongType })
                 ) {
                     MediaDetailScreen()
+                }
+                composable(
+                    "webview/{url}",
+                    arguments = listOf(navArgument("url") { type = NavType.StringType })
+                ) { backStackEntry ->
+                    val url = backStackEntry.arguments?.getString("url") ?: ""
+                    WebViewScreen(url = url)
                 }
             }
         }

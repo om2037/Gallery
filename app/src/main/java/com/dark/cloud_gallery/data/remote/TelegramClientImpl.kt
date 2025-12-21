@@ -96,4 +96,33 @@ class TelegramClientImpl @Inject constructor(
     override fun getAuthorizationStateFlow(): Flow<TdApi.AuthorizationState> {
         return _authorizationState.asStateFlow().filter { it != null }.map { it!! }
     }
+
+    override suspend fun getChatHistory(chatId: Long, fromMessageId: Long): TdApi.Messages =
+        suspendCancellableCoroutine { continuation ->
+            client.send(TdApi.GetChatHistory(chatId, fromMessageId, 0, 100, false)) {
+                when (it) {
+                    is TdApi.Messages -> continuation.resume(it)
+                    is TdApi.Error -> continuation.resume(TdApi.Messages(0, emptyArray())) // Or handle error
+                    else -> continuation.resume(TdApi.Messages(0, emptyArray()))
+                }
+            }
+        }
+
+    override suspend fun downloadFile(fileId: Int): TdApi.File =
+        suspendCancellableCoroutine { continuation ->
+            client.send(TdApi.DownloadFile(fileId, 1, 0, 0, true)) {
+                when (it) {
+                    is TdApi.File -> continuation.resume(it)
+                    is TdApi.Error -> {
+                        // In a real app, you'd want to handle this error properly
+                        client.send(TdApi.GetFile(fileId)) { fileResult ->
+                            if (fileResult is TdApi.File) {
+                                continuation.resume(fileResult)
+                            }
+                        }
+                    }
+                    else -> {}
+                }
+            }
+        }
 }

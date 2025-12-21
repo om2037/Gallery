@@ -38,9 +38,11 @@ class LoginViewModel @Inject constructor(
         }
     }
 
-    fun sendAuthCode(apiId: String, apiHash: String, phoneNumber: String) {
+    fun sendAuthCode(apiId: String, apiHash: String, phoneNumber: String, channelId: String) {
         viewModelScope.launch {
             _uiState.value = LoginUiState.Loading
+            sessionManager.saveApiCredentials(apiId, apiHash)
+            sessionManager.saveChannelId(channelId)
             telegramClient.sendAuthenticationCode(apiId, apiHash, phoneNumber)
         }
     }

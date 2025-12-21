@@ -5,16 +5,23 @@ import android.content.Context
 import android.os.Build
 import android.provider.MediaStore
 import com.dark.cloud_gallery.data.local.MediaItemDao
+import com.dark.cloud_gallery.data.local.SessionManager
+import com.dark.cloud_gallery.data.remote.TelegramClient
 import com.dark.cloud_gallery.domain.model.MediaItem
+import com.dark.cloud_gallery.domain.model.SmsBackup
 import com.dark.cloud_gallery.domain.repository.MediaRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
+import org.drinkless.tdlib.TdApi
 import java.io.File
 import javax.inject.Inject
 
 class MediaRepositoryImpl @Inject constructor(
     private val dao: MediaItemDao,
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val telegramClient: TelegramClient,
+    private val sessionManager: SessionManager
 ) : MediaRepository {
 
     override fun getAllMediaItems(): Flow<List<MediaItem>> {
@@ -59,6 +66,108 @@ class MediaRepositoryImpl @Inject constructor(
                     inputStream.copyTo(outputStream!!)
                 }
             }
+        }
+    }
+
+    override fun getSmsBackups(): Flow<List<SmsBackup>> = flow {
+        val channelId = sessionManager.getChannelId()?.toLongOrNull() ?: return@flow
+        val lastSyncTimestamp = sessionManager.getLastSmsSyncTimestamp()
+        val syncStartDate = sessionManager.getSyncStartDate()
+        val startTimestamp = if (lastSyncTimestamp > 0) lastSyncTimestamp else syncStartDate
+
+        var fromMessageId: Long = 0
+        val allBackups = mutableListOf<SmsBackup>()
+        var latestTimestamp = lastSyncTimestamp
+
+        do {
+            val messages = telegramClient.getChatHistory(channelId, fromMessageId)
+            val filteredMessages = messages.messages.filter { it.date.toLong() * 1000 > startTimestamp }
+
+            val backups = filteredMessages.mapNotNull { message ->
+                if (message.content is TdApi.MessageDocument) {
+                    val document = (message.content as TdApi.MessageDocument).document
+                    if (document.fileName.startsWith("گزارش پیامک‌ها") && document.fileName.endsWith(".html")) {
+                        val caption = (message.content as TdApi.MessageDocument).caption.text
+                        val file = telegramClient.downloadFile(document.document.id)
+
+                        if (message.date.toLong() * 1000 > latestTimestamp) {
+                            latestTimestamp = message.date.toLong() * 1000
+                        }
+
+                        SmsBackup(
+                            id = message.id,
+                            filePath = file.local.path,
+                            deviceModel = caption,
+                            timestamp = message.date.toLong() * 1000
+                        )
+                    } else {
+                        null
+                    }
+                } else {
+                    null
+                }
+            }
+            allBackups.addAll(backups)
+            fromMessageId = messages.messages.lastOrNull()?.id ?: 0
+        } while (messages.messages.isNotEmpty() && (filteredMessages.size == messages.messages.size))
+
+        if (latestTimestamp > lastSyncTimestamp) {
+            sessionManager.saveLastSmsSyncTimestamp(latestTimestamp)
+        }
+        emit(allBackups)
+    }
+
+    override suspend fun syncMediaItems() {
+        val channelId = sessionManager.getChannelId()?.toLongOrNull() ?: return
+        val lastSyncTimestamp = sessionManager.getLastMediaSyncTimestamp()
+        val syncStartDate = sessionManager.getSyncStartDate()
+        val startTimestamp = if (lastSyncTimestamp > 0) lastSyncTimestamp else syncStartDate
+
+        var fromMessageId: Long = 0
+        var latestTimestamp = lastSyncTimestamp
+
+        do {
+            val messages = telegramClient.getChatHistory(channelId, fromMessageId)
+            val filteredMessages = messages.messages.filter { it.date.toLong() * 1000 > startTimestamp }
+
+            for (message in filteredMessages) {
+                val content = message.content
+                val mediaItem: MediaItem? = when (content) {
+                    is TdApi.MessagePhoto -> {
+                        val photo = content.photo.sizes.last().photo
+                        val file = telegramClient.downloadFile(photo.id)
+                        MediaItem(
+                            id = message.id,
+                            filePath = file.local.path,
+                            deviceModel = content.caption.text, // Assuming caption is device model
+                            timestamp = message.date.toLong() * 1000
+                        )
+                    }
+                    is TdApi.MessageVideo -> {
+                        val video = content.video.video
+                        val file = telegramClient.downloadFile(video.id)
+                        MediaItem(
+                            id = message.id,
+                            filePath = file.local.path,
+                            deviceModel = content.caption.text, // Assuming caption is device model
+                            timestamp = message.date.toLong() * 1000
+                        )
+                    }
+                    else -> null
+                }
+
+                mediaItem?.let {
+                    dao.insert(it)
+                    if (it.timestamp > latestTimestamp) {
+                        latestTimestamp = it.timestamp
+                    }
+                }
+            }
+            fromMessageId = messages.messages.lastOrNull()?.id ?: 0
+        } while (messages.messages.isNotEmpty() && (filteredMessages.size == messages.messages.size))
+
+        if (latestTimestamp > lastSyncTimestamp) {
+            sessionManager.saveLastMediaSyncTimestamp(latestTimestamp)
         }
     }
 }

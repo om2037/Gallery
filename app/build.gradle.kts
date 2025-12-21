@@ -94,6 +94,9 @@ dependencies {
     // Accompanist
     implementation("com.google.accompanist:accompanist-permissions:0.34.0")
 
+    // Zoomable Image
+    implementation("com.github.k-g-a:zoomable:1.3.0")
+
     // Testing
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
