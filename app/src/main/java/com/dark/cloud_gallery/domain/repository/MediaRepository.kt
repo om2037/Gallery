@@ -1,6 +1,7 @@
 package com.dark.cloud_gallery.domain.repository
 
 import com.dark.cloud_gallery.domain.model.MediaItem
+import com.dark.cloud_gallery.domain.model.SmsBackup
 import kotlinx.coroutines.flow.Flow
 
 interface MediaRepository {

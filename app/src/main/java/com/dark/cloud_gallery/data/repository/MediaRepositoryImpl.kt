@@ -137,20 +137,22 @@ class MediaRepositoryImpl @Inject constructor(
                         val photo = content.photo.sizes.last().photo
                         val file = telegramClient.downloadFile(photo.id)
                         MediaItem(
-                            id = message.id,
+                            telegramMessageId = message.id,
                             filePath = file.local.path,
                             deviceModel = content.caption.text, // Assuming caption is device model
-                            timestamp = message.date.toLong() * 1000
+                            timestamp = message.date.toLong() * 1000,
+                            mediaType = "photo"
                         )
                     }
                     is TdApi.MessageVideo -> {
                         val video = content.video.video
                         val file = telegramClient.downloadFile(video.id)
                         MediaItem(
-                            id = message.id,
+                            telegramMessageId = message.id,
                             filePath = file.local.path,
                             deviceModel = content.caption.text, // Assuming caption is device model
-                            timestamp = message.date.toLong() * 1000
+                            timestamp = message.date.toLong() * 1000,
+                            mediaType = "video"
                         )
                     }
                     else -> null
