@@ -26,10 +26,15 @@ class MainViewModel @Inject constructor(
     val isSyncing = _isSyncing.asStateFlow()
 
     init {
-        if (sessionManager.isLoggedIn()) {
-            _authState.value = AuthState.LoggedIn
-        } else {
-            _authState.value = AuthState.LoggedOut
+        viewModelScope.launch {
+            sessionManager.loggedInStateFlow.collect { isLoggedIn ->
+                if (isLoggedIn) {
+                    _authState.value = AuthState.LoggedIn
+                    checkInitialState()
+                } else {
+                    _authState.value = AuthState.LoggedOut
+                }
+            }
         }
     }
 
