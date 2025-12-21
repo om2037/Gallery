@@ -95,7 +95,7 @@ dependencies {
     implementation("com.google.accompanist:accompanist-permissions:0.34.0")
 
     // Zoomable Image
-    implementation("com.github.k-g-a:zoomable:1.3.0")
+    implementation("com.github.p-enable:zoomable:1.3.0")
 
     // Testing
     testImplementation("junit:junit:4.13.2")
