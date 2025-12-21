@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import net.engawapg.lib.zoomable.rememberZoomState
 import net.engawapg.lib.zoomable.zoomable
@@ -80,7 +81,7 @@ fun MediaDetailScreen(
                             Spacer(modifier = Modifier.height(16.dp))
                             Button(
                                 onClick = {
-                                    if (storagePermissionState.hasPermission) {
+                                    if (storagePermissionState.status.isGranted) {
                                         viewModel.downloadMediaItem()
                                     } else {
                                         storagePermissionState.launchPermissionRequest()
