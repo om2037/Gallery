@@ -1,7 +1,7 @@
 package com.dark.cloud_gallery.data.remote
 
 import kotlinx.coroutines.flow.Flow
-import org.drinkless.td.libcore.telegram.TdApi
+import org.drinkless.tdlib.TdApi
 
 interface TelegramClient {
     suspend fun sendAuthenticationCode(apiId: String, apiHash: String, phoneNumber: String)

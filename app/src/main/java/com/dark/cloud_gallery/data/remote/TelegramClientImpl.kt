@@ -11,8 +11,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.suspendCancellableCoroutine
-import org.drinkless.td.libcore.telegram.Client
-import org.drinkless.td.libcore.telegram.TdApi
+import org.drinkless.tdlib.Client
+import org.drinkless.tdlib.TdApi
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.coroutines.resume
@@ -22,7 +22,11 @@ class TelegramClientImpl @Inject constructor(
     @ApplicationContext private val context: Context
 ) : TelegramClient {
 
-    private val client: Client = Client.create(null, null, null)
+    private val client: Client = Client.create({ obj ->
+        if (obj is TdApi.UpdateAuthorizationState) {
+            _authorizationState.value = obj.authorizationState
+        }
+    }, null, null)
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     private val _authorizationState = MutableStateFlow<TdApi.AuthorizationState?>(null)
@@ -44,17 +48,17 @@ class TelegramClientImpl @Inject constructor(
                 return@suspendCancellableCoroutine
             }
 
-            val setTdlibParameters = TdApi.SetTdlibParameters(
-                apiId = apiIdInt,
-                apiHash = apiHash,
-                databaseDirectory = context.filesDir.absolutePath,
-                useMessageDatabase = true,
-                useSecretChats = true,
-                systemLanguageCode = "en",
-                deviceModel = "Android",
-                systemVersion = "1",
-                applicationVersion = "1.0"
-            )
+            val params = TdApi.SetTdlibParameters()
+            params.apiId = apiIdInt
+            params.apiHash = apiHash
+            params.databaseDirectory = context.filesDir.absolutePath
+            params.useMessageDatabase = true
+            params.useSecretChats = true
+            params.systemLanguageCode = "en"
+            params.deviceModel = "Android"
+            params.systemVersion = "1"
+            params.applicationVersion = "1.0"
+            val setTdlibParameters = params
             client.send(setTdlibParameters) {
                 when (it.constructor) {
                     TdApi.Ok.CONSTRUCTOR -> {
