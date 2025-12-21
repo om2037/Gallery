@@ -19,35 +19,50 @@ class MainViewModel @Inject constructor(
     private val mediaRepository: MediaRepository
 ) : ViewModel() {
 
-    private val _authState = MutableStateFlow<AuthState>(AuthState.Loading)
+    private val _authState = MutableStateFlow<AuthState>(AuthState.LoggedIn)
     val authState = _authState.asStateFlow()
+
+    private val _authError = MutableStateFlow<String?>(null)
+    val authError = _authError.asStateFlow()
 
     private val _isSyncing = MutableStateFlow(false)
     val isSyncing = _isSyncing.asStateFlow()
 
     init {
+        checkAuthStatus()
+    }
+
+    fun checkAuthStatus() {
+        _authError.value = null // Reset error state
         viewModelScope.launch {
-            // First, check if we have the necessary credentials to even attempt to connect
-            if (sessionManager.getApiId().isNullOrBlank() || sessionManager.getApiHash().isNullOrBlank()) {
-                _authState.value = AuthState.LoggedOut
-            } else {
-                // If we have credentials, then we can proceed to check the Telegram client's state
+            try {
+                if (sessionManager.getApiId().isNullOrBlank() || sessionManager.getApiHash().isNullOrBlank()) {
+                    _authState.value = AuthState.LoggedOut
+                    return@launch
+                }
+
                 telegramClient.getAuthorizationStateFlow().collect {
                     when (it) {
-                        is TdApi.AuthorizationStateReady -> _authState.value = AuthState.LoggedIn
+                        is TdApi.AuthorizationStateReady -> {
+                            _authState.value = AuthState.LoggedIn
+                        }
                         is TdApi.AuthorizationStateWaitTdlibParameters,
                         is TdApi.AuthorizationStateWaitPhoneNumber,
-                        is TdApi.AuthorizationStateWaitCode -> _authState.value = AuthState.LoggedOut
-                        is TdApi.AuthorizationStateClosed -> _authState.value = AuthState.LoggedOut
-                        // You might want to handle other states explicitly, e.g., logging out or showing errors
-                        else -> {
-                            // For any other unhandled state, assume logged out to be safe
+                        is TdApi.AuthorizationStateWaitCode,
+                        is TdApi.AuthorizationStateClosed -> {
                             _authState.value = AuthState.LoggedOut
                         }
+                        // Potentially handle other states if needed, for now they do nothing
                     }
                 }
+            } catch (e: Exception) {
+                _authError.value = "Failed to check login status."
             }
         }
+    }
+
+    fun clearAuthError() {
+        _authError.value = null
     }
 
     fun saveSyncStartDate(dateMillis: Long?) {

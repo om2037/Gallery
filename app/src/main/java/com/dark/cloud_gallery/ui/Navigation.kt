@@ -1,13 +1,6 @@
 package com.dark.cloud_gallery.ui
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -19,72 +12,49 @@ import com.dark.cloud_gallery.ui.features.gallery.MediaDetailScreen
 import com.dark.cloud_gallery.ui.features.login.LoginScreen
 import com.dark.cloud_gallery.ui.features.login.OtpScreen
 import com.dark.cloud_gallery.ui.features.webview.WebViewScreen
-import java.net.URLEncoder
-import java.nio.charset.StandardCharsets
 
 @Composable
 fun Navigation(
     viewModel: MainViewModel = hiltViewModel()
 ) {
     val navController = rememberNavController()
-    val authState by viewModel.authState.collectAsState()
 
-    when (authState) {
-        is AuthState.Loading -> {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator()
-            }
+    NavHost(
+        navController = navController,
+        startDestination = "main"
+    ) {
+        composable("main") {
+            MainScreen(navController, viewModel)
         }
-
-        is AuthState.LoggedIn -> {
-            NavHost(
-                navController = navController,
-                startDestination = "main"
-            ) {
-                composable("main") {
-                    MainScreen(navController)
-                }
-                composable(
-                    "mediaDetail/{mediaId}",
-                    arguments = listOf(navArgument("mediaId") { type = NavType.LongType })
-                ) {
-                    MediaDetailScreen()
-                }
-                composable(
-                    "webview/{url}",
-                    arguments = listOf(navArgument("url") { type = NavType.StringType })
-                ) { backStackEntry ->
-                    val url = backStackEntry.arguments?.getString("url") ?: ""
-                    WebViewScreen(url = url)
-                }
-            }
+        composable(
+            "mediaDetail/{mediaId}",
+            arguments = listOf(navArgument("mediaId") { type = NavType.LongType })
+        ) {
+            MediaDetailScreen()
         }
-
-        is AuthState.LoggedOut -> {
-            NavHost(
-                navController = navController,
-                startDestination = "login"
-            ) {
-                composable("login") {
-                    LoginScreen(
-                        onNavigateToOtp = {
-                            navController.navigate("otp")
-                        }
-                    )
+        composable(
+            "webview/{url}",
+            arguments = listOf(navArgument("url") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val url = backStackEntry.arguments?.getString("url") ?: ""
+            WebViewScreen(url = url)
+        }
+        composable("login") {
+            LoginScreen(
+                onNavigateToOtp = {
+                    navController.navigate("otp")
                 }
-                composable("otp") {
-                    OtpScreen(
-                        onNavigateToGallery = {
-                            navController.navigate("main") {
-                                popUpTo("login") { inclusive = true }
-                            }
-                        }
-                    )
+            )
+        }
+        composable("otp") {
+            OtpScreen(
+                onNavigateToGallery = {
+                    navController.navigate("main") {
+                        popUpTo("login") { inclusive = true }
+                        popUpTo("otp") { inclusive = true }
+                    }
                 }
-            }
+            )
         }
     }
 }
