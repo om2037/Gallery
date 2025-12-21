@@ -65,10 +65,17 @@ fun LoginScreen(
                 onValueChange = { phoneNumber = it },
                 label = { Text("Phone Number") }
             )
+            Spacer(modifier = Modifier.height(8.dp))
+            var channelId by remember { mutableStateOf("") }
+            OutlinedTextField(
+                value = channelId,
+                onValueChange = { channelId = it },
+                label = { Text("Channel ID") }
+            )
             Spacer(modifier = Modifier.height(16.dp))
             Button(
                 onClick = {
-                    viewModel.sendAuthCode(apiId, apiHash, phoneNumber)
+                    viewModel.sendAuthCode(apiId, apiHash, phoneNumber, channelId)
                 }
             ) {
                 Text("Login")
