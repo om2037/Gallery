@@ -31,7 +31,6 @@ class MainViewModel @Inject constructor(
                 when (it) {
                     is TdApi.AuthorizationStateReady -> _authState.value = AuthState.LoggedIn
                     is TdApi.AuthorizationStateWaitTdlibParameters,
-                    is TdApi.AuthorizationStateWaitEncryptionKey,
                     is TdApi.AuthorizationStateWaitPhoneNumber,
                     is TdApi.AuthorizationStateWaitCode -> _authState.value = AuthState.LoggedOut
                     is TdApi.AuthorizationStateClosed -> _authState.value = AuthState.LoggedOut
