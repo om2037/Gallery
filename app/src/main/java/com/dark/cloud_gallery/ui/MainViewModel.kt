@@ -26,26 +26,10 @@ class MainViewModel @Inject constructor(
     val isSyncing = _isSyncing.asStateFlow()
 
     init {
-        viewModelScope.launch {
-            // First, check if we have the necessary credentials to even attempt to connect
-            if (sessionManager.getApiId().isNullOrBlank() || sessionManager.getApiHash().isNullOrBlank()) {
-                _authState.value = AuthState.LoggedOut
-            } else {
-                // If we have credentials, then we can proceed to check the Telegram client's state
-                telegramClient.getAuthorizationStateFlow().collect {
-                    when (it) {
-                        is TdApi.AuthorizationStateReady -> _authState.value = AuthState.LoggedIn
-                        is TdApi.AuthorizationStateWaitPhoneNumber,
-                        is TdApi.AuthorizationStateWaitCode,
-                        is TdApi.AuthorizationStateClosed -> _authState.value = AuthState.LoggedOut
-                        // Keep loading during other intermediate states like WaitTdlibParameters
-                        is TdApi.AuthorizationStateWaitTdlibParameters -> {} // Do nothing, stay in loading
-                        else -> {
-                            // For any other unhandled state, do nothing to avoid incorrectly logging out
-                        }
-                    }
-                }
-            }
+        if (sessionManager.isLoggedIn()) {
+            _authState.value = AuthState.LoggedIn
+        } else {
+            _authState.value = AuthState.LoggedOut
         }
     }
 
