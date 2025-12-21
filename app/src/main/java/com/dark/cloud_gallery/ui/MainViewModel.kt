@@ -2,6 +2,7 @@ package com.dark.cloud_gallery.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.dark.cloud_gallery.data.local.FileLogger
 import com.dark.cloud_gallery.data.local.SessionManager
 import com.dark.cloud_gallery.data.remote.TelegramClient
 import com.dark.cloud_gallery.domain.repository.MediaRepository
@@ -12,11 +13,13 @@ import kotlinx.coroutines.launch
 import org.drinkless.tdlib.TdApi
 import javax.inject.Inject
 
+import android.app.Application
 @HiltViewModel
 class MainViewModel @Inject constructor(
     private val telegramClient: TelegramClient,
     private val sessionManager: SessionManager,
-    private val mediaRepository: MediaRepository
+    private val mediaRepository: MediaRepository,
+    private val application: Application
 ) : ViewModel() {
 
     private val _authState = MutableStateFlow<AuthState>(AuthState.LoggedIn)
@@ -33,15 +36,19 @@ class MainViewModel @Inject constructor(
     }
 
     fun checkAuthStatus() {
+        FileLogger.log(application, "MainViewModel: Starting authentication status check.")
         _authError.value = null // Reset error state
         viewModelScope.launch {
             try {
                 if (sessionManager.getApiId().isNullOrBlank() || sessionManager.getApiHash().isNullOrBlank()) {
+                    FileLogger.log(application, "MainViewModel: No API ID or Hash found in SessionManager. Setting state to LoggedOut.")
                     _authState.value = AuthState.LoggedOut
                     return@launch
                 }
 
+                FileLogger.log(application, "MainViewModel: API credentials found. Subscribing to Telegram authorization state.")
                 telegramClient.getAuthorizationStateFlow().collect {
+                    FileLogger.log(application, "MainViewModel: Received new authorization state: ${it.javaClass.simpleName}")
                     when (it) {
                         is TdApi.AuthorizationStateReady -> {
                             _authState.value = AuthState.LoggedIn
@@ -56,6 +63,7 @@ class MainViewModel @Inject constructor(
                     }
                 }
             } catch (e: Exception) {
+                FileLogger.log(application, "MainViewModel: Exception during auth check: ${e.message}")
                 _authError.value = "Failed to check login status."
             }
         }

@@ -23,6 +23,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberDatePickerState
+import android.Manifest
+import android.os.Build
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -44,9 +46,12 @@ import com.dark.cloud_gallery.ui.AuthState
 import com.dark.cloud_gallery.ui.MainViewModel
 import com.dark.cloud_gallery.ui.features.gallery.GalleryScreen
 import com.dark.cloud_gallery.ui.features.sms.SmsScreen
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.isGranted
+import com.google.accompanist.permissions.rememberPermissionState
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
 @Composable
 fun MainScreen(
     navController: NavController,
@@ -62,6 +67,16 @@ fun MainScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
+    // Permissions handling
+    if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.Q) {
+        val storagePermissionState = rememberPermissionState(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+        LaunchedEffect(Unit) {
+            if (!storagePermissionState.status.isGranted) {
+                storagePermissionState.launchPermissionRequest()
+            }
+        }
+    }
+
 
     LaunchedEffect(authState) {
         if (authState is AuthState.LoggedOut) {
@@ -73,12 +88,14 @@ fun MainScreen(
     LaunchedEffect(authError) {
         authError?.let {
             scope.launch {
-                snackbarHostState.showSnackbar(
+                val result = snackbarHostState.showSnackbar(
                     message = it,
                     actionLabel = "Retry"
                 )
+                if (result == SnackbarResult.ActionPerformed) {
+                    viewModel.checkAuthStatus()
+                }
                 viewModel.clearAuthError()
-                viewModel.checkAuthStatus()
             }
         }
     }
