@@ -42,7 +42,7 @@ android {
         compose = true
     }
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.1"
+        kotlinCompilerExtensionVersion = "1.5.10"
     }
     packaging {
         resources {
@@ -63,6 +63,7 @@ dependencies {
     implementation("androidx.compose.ui:ui-graphics")
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
+    implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.navigation:navigation-compose:2.7.6")
 
     // Hilt
@@ -85,7 +86,7 @@ dependencies {
     implementation("io.coil-kt:coil-compose:2.5.0")
 
     // TDLib
-    implementation("org.drinkless:td.lib.ktx:1.8.24")
+    implementation("com.github.tdlibx:td:1.8.56")
 
     // Glassmorphism (Haze)
     implementation("dev.chrisbanes.haze:haze:0.5.2")
