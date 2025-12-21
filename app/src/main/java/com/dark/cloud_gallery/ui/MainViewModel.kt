@@ -35,14 +35,13 @@ class MainViewModel @Inject constructor(
                 telegramClient.getAuthorizationStateFlow().collect {
                     when (it) {
                         is TdApi.AuthorizationStateReady -> _authState.value = AuthState.LoggedIn
-                        is TdApi.AuthorizationStateWaitTdlibParameters,
                         is TdApi.AuthorizationStateWaitPhoneNumber,
-                        is TdApi.AuthorizationStateWaitCode -> _authState.value = AuthState.LoggedOut
+                        is TdApi.AuthorizationStateWaitCode,
                         is TdApi.AuthorizationStateClosed -> _authState.value = AuthState.LoggedOut
-                        // You might want to handle other states explicitly, e.g., logging out or showing errors
+                        // Keep loading during other intermediate states like WaitTdlibParameters
+                        is TdApi.AuthorizationStateWaitTdlibParameters -> {} // Do nothing, stay in loading
                         else -> {
-                            // For any other unhandled state, assume logged out to be safe
-                            _authState.value = AuthState.LoggedOut
+                            // For any other unhandled state, do nothing to avoid incorrectly logging out
                         }
                     }
                 }
