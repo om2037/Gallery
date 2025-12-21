@@ -2,6 +2,7 @@ package com.dark.cloud_gallery.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.dark.cloud_gallery.data.local.FileLogger
 import com.dark.cloud_gallery.data.local.SessionManager
 import com.dark.cloud_gallery.data.remote.TelegramClient
 import com.dark.cloud_gallery.domain.repository.MediaRepository
@@ -12,42 +13,64 @@ import kotlinx.coroutines.launch
 import org.drinkless.tdlib.TdApi
 import javax.inject.Inject
 
+import android.app.Application
 @HiltViewModel
 class MainViewModel @Inject constructor(
     private val telegramClient: TelegramClient,
     private val sessionManager: SessionManager,
-    private val mediaRepository: MediaRepository
+    private val mediaRepository: MediaRepository,
+    private val application: Application
 ) : ViewModel() {
 
-    private val _authState = MutableStateFlow<AuthState>(AuthState.Loading)
+    private val _authState = MutableStateFlow<AuthState>(AuthState.LoggedIn)
     val authState = _authState.asStateFlow()
+
+    private val _authError = MutableStateFlow<String?>(null)
+    val authError = _authError.asStateFlow()
 
     private val _isSyncing = MutableStateFlow(false)
     val isSyncing = _isSyncing.asStateFlow()
 
     init {
+        checkAuthStatus()
+    }
+
+    fun checkAuthStatus() {
+        FileLogger.log(application, "MainViewModel: Starting authentication status check.")
+        _authError.value = null // Reset error state
         viewModelScope.launch {
-            // First, check if we have the necessary credentials to even attempt to connect
-            if (sessionManager.getApiId().isNullOrBlank() || sessionManager.getApiHash().isNullOrBlank()) {
-                _authState.value = AuthState.LoggedOut
-            } else {
-                // If we have credentials, then we can proceed to check the Telegram client's state
+            try {
+                if (sessionManager.getApiId().isNullOrBlank() || sessionManager.getApiHash().isNullOrBlank()) {
+                    FileLogger.log(application, "MainViewModel: No API ID or Hash found in SessionManager. Setting state to LoggedOut.")
+                    _authState.value = AuthState.LoggedOut
+                    return@launch
+                }
+
+                FileLogger.log(application, "MainViewModel: API credentials found. Subscribing to Telegram authorization state.")
                 telegramClient.getAuthorizationStateFlow().collect {
+                    FileLogger.log(application, "MainViewModel: Received new authorization state: ${it.javaClass.simpleName}")
                     when (it) {
-                        is TdApi.AuthorizationStateReady -> _authState.value = AuthState.LoggedIn
-                        is TdApi.AuthorizationStateWaitTdlibParameters,
-                        is TdApi.AuthorizationStateWaitPhoneNumber,
-                        is TdApi.AuthorizationStateWaitCode -> _authState.value = AuthState.LoggedOut
-                        is TdApi.AuthorizationStateClosed -> _authState.value = AuthState.LoggedOut
-                        // You might want to handle other states explicitly, e.g., logging out or showing errors
-                        else -> {
-                            // For any other unhandled state, assume logged out to be safe
+                        is TdApi.AuthorizationStateReady -> {
+                            if (!sessionManager.isLoggedIn()) sessionManager.setLoggedIn(true)
+                            _authState.value = AuthState.LoggedIn
+                        }
+                        is TdApi.AuthorizationStateClosed -> {
+                            sessionManager.setLoggedIn(false)
                             _authState.value = AuthState.LoggedOut
                         }
+                        // For other states (WaitPhoneNumber, WaitCode, etc.), we do nothing.
+                        // This prevents logging out the user during the login flow.
                     }
                 }
+            } catch (e: Exception) {
+                FileLogger.log(application, "MainViewModel: Exception during auth check: ${e.message}")
+                _authError.value = "Failed to check login status."
             }
         }
+    }
+
+    fun clearAuthError() {
+        _authError.value = null
     }
 
     fun saveSyncStartDate(dateMillis: Long?) {
