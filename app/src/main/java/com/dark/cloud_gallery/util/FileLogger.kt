@@ -1,7 +1,8 @@
 package com.dark.cloud_gallery.util
 
 import android.content.Context
-import android.os.Environment
+import android.net.Uri
+import androidx.core.content.FileProvider
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
@@ -11,9 +12,11 @@ import java.util.Locale
 
 class FileLogger private constructor(private val context: Context) {
 
-    private val logFileName = "2020.txt"
+    private val logFileName = "cloud_gallery_log.txt"
 
     companion object {
+        const val AUTHORITY = "com.dark.cloud_gallery.fileprovider"
+
         @Volatile
         private var instance: FileLogger? = null
 
@@ -27,7 +30,12 @@ class FileLogger private constructor(private val context: Context) {
 
         fun log(tag: String, message: String, throwable: Throwable? = null) {
             instance?.logInternal(tag, message, throwable)
-                ?: android.util.Log.e("FileLogger", "FileLogger not initialized. Call initialize() first.")
+                ?: android.util.Log.e("FileLogger", "FileLogger not initialized.")
+        }
+
+        fun getLogFileUri(context: Context): Uri {
+            val logFile = File(context.filesDir, instance?.logFileName ?: "cloud_gallery_log.txt")
+            return FileProvider.getUriForFile(context, AUTHORITY, logFile)
         }
     }
 
@@ -42,25 +50,20 @@ class FileLogger private constructor(private val context: Context) {
         }
 
         try {
-            writeToDownloads(logText)
+            writeToInternalStorage(logText)
         } catch (e: Exception) {
-            android.util.Log.e("FileLogger", "Failed to write to log file", e)
+            android.util.Log.e("FileLogger", "Failed to write to internal log file", e)
         }
     }
 
-    private fun writeToDownloads(text: String) {
+    private fun writeToInternalStorage(text: String) {
         try {
-            @Suppress("DEPRECATION")
-            val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-            if (!downloadsDir.exists()) {
-                downloadsDir.mkdirs()
-            }
-            val logFile = File(downloadsDir, logFileName)
+            val logFile = File(context.filesDir, logFileName)
             FileOutputStream(logFile, true).use {
                 it.write(text.toByteArray())
             }
         } catch (e: IOException) {
-            android.util.Log.e("FileLogger", "IOException while writing to log file", e)
+            android.util.Log.e("FileLogger", "IOException while writing to internal log", e)
         }
     }
 }

@@ -1,19 +1,20 @@
 package com.dark.cloud_gallery.ui
 
 import android.content.Context
+import android.content.Intent
+import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import com.dark.cloud_gallery.data.local.SessionManager
 import com.dark.cloud_gallery.data.remote.TelegramClient
 import com.dark.cloud_gallery.domain.repository.MediaRepository
+import com.dark.cloud_gallery.util.Constants.SYNC_WORK_TAG
+import com.dark.cloud_gallery.util.FileLogger
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
-import androidx.lifecycle.Observer
-import androidx.work.WorkInfo
-import com.dark.cloud_gallery.util.Constants.SYNC_WORK_TAG
-import com.dark.cloud_gallery.util.FileLogger
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.drinkless.tdlib.TdApi
@@ -105,6 +106,23 @@ class MainViewModel @Inject constructor(
             FileLogger.log("MainViewModel", "Returned from syncMediaItems. Now observing WorkManager LiveData.")
             workManager.getWorkInfosByTagLiveData(SYNC_WORK_TAG)
                 .observeForever(workInfosObserver)
+        }
+    }
+
+    fun shareLogFile(context: Context) {
+        try {
+            val logFileUri = FileLogger.getLogFileUri(context)
+            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                type = "text/plain"
+                putExtra(Intent.EXTRA_STREAM, logFileUri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            // Use a chooser to let the user decide how to share
+            val chooserIntent = Intent.createChooser(shareIntent, "Share Log File")
+            chooserIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            context.startActivity(chooserIntent)
+        } catch (e: Exception) {
+            FileLogger.log("MainViewModel", "Error sharing log file", e)
         }
     }
 
