@@ -1,21 +1,19 @@
 package com.dark.cloud_gallery.data.remote
 
 import android.content.Context
+import android.util.Log
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.Data
 import androidx.work.WorkerParameters
-import com.dark.cloud_gallery.domain.repository.MediaRepository
-import com.dark.cloud_gallery.domain.usecase.CaptionParser
+import com.dark.cloud_gallery.data.local.MediaItemDao
+import com.dark.cloud_gallery.data.local.SessionManager
+import com.dark.cloud_gallery.domain.model.MediaItem
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.drinkless.tdlib.TdApi
-
-import com.dark.cloud_gallery.data.local.MediaItemDao
-import com.dark.cloud_gallery.data.local.SessionManager
-import com.dark.cloud_gallery.domain.model.MediaItem
 
 @HiltWorker
 class SyncWorker @AssistedInject constructor(
@@ -54,15 +52,12 @@ class SyncWorker @AssistedInject constructor(
                         )
 
                         val content = message.content
-                        val captionText = when (content) {
+                        val captionText = (when (content) {
                             is TdApi.MessagePhoto -> content.caption.text
                             is TdApi.MessageVideo -> content.caption.text
-                            else -> null
-                        }
+                            else -> ""
+                        }).ifBlank { "Unknown Device" }
 
-                        if (captionText.isNullOrBlank()) {
-                            continue
-                        }
 
                         val mediaItem: MediaItem? = when (content) {
                             is TdApi.MessagePhoto -> {
@@ -98,7 +93,7 @@ class SyncWorker @AssistedInject constructor(
                             }
                         }
                     } catch (e: Exception) {
-                        // Ignore message if it fails to process, preventing a crash.
+                        Log.e("SyncWorker", "Failed to process message ${message.id}", e)
                         continue
                     }
                 }
@@ -118,6 +113,7 @@ class SyncWorker @AssistedInject constructor(
             )
             Result.success()
         } catch (e: Exception) {
+            Log.e("SyncWorker", "Sync failed", e)
             Result.failure()
         }
     }
