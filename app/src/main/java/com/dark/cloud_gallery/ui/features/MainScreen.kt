@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PhotoLibrary
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Sms
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.foundation.layout.Arrangement
@@ -62,8 +63,11 @@ fun MainScreen(
                 TopAppBar(
                     title = { Text("Cloud Gallery") },
                     actions = {
+                        IconButton(onClick = { viewModel.triggerImmediateSync() }) {
+                            Icon(Icons.Filled.Refresh, contentDescription = "Sync Now")
+                        }
                         IconButton(onClick = { showDatePicker = true }) {
-                            Icon(Icons.Filled.Sync, contentDescription = "Sync")
+                            Icon(Icons.Filled.Sync, contentDescription = "Sync from Date")
                         }
                     }
                 )

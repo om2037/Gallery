@@ -74,6 +74,10 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    fun triggerImmediateSync() {
+        triggerSync()
+    }
+
     private val workManager = WorkManager.getInstance(context)
     private val workInfosObserver = Observer<List<WorkInfo>> { workInfos ->
         val workInfo = workInfos.firstOrNull() ?: return@Observer
