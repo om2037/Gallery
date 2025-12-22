@@ -30,8 +30,7 @@ class MainViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val telegramClient: TelegramClient,
     private val sessionManager: SessionManager,
-    private val mediaRepository: MediaRepository,
-    private val fileLogger: FileLogger
+    private val mediaRepository: MediaRepository
 ) : ViewModel() {
 
     private val _authState = MutableStateFlow<AuthState>(AuthState.Loading)
@@ -70,16 +69,16 @@ class MainViewModel @Inject constructor(
     }
 
     fun saveSyncStartDate(dateMillis: Long?) {
-        fileLogger.log("MainViewModel", "Sync from date button clicked.")
+        FileLogger.log("MainViewModel", "Sync from date button clicked.")
         dateMillis?.let {
-            fileLogger.log("MainViewModel", "Date selected: $it. Triggering sync.")
+            FileLogger.log("MainViewModel", "Date selected: $it. Triggering sync.")
             sessionManager.saveSyncStartDate(it)
             triggerSync()
         }
     }
 
     fun triggerImmediateSync() {
-        fileLogger.log("MainViewModel", "Immediate sync button clicked. Triggering sync.")
+        FileLogger.log("MainViewModel", "Immediate sync button clicked. Triggering sync.")
         triggerSync()
     }
 
@@ -99,11 +98,11 @@ class MainViewModel @Inject constructor(
     }
 
     private fun triggerSync() {
-        fileLogger.log("MainViewModel", "Entering triggerSync().")
+        FileLogger.log("MainViewModel", "Entering triggerSync().")
         viewModelScope.launch {
-            fileLogger.log("MainViewModel", "Coroutine for sync started. Calling mediaRepository.syncMediaItems().")
+            FileLogger.log("MainViewModel", "Coroutine for sync started. Calling mediaRepository.syncMediaItems().")
             mediaRepository.syncMediaItems()
-            fileLogger.log("MainViewModel", "Returned from syncMediaItems. Now observing WorkManager LiveData.")
+            FileLogger.log("MainViewModel", "Returned from syncMediaItems. Now observing WorkManager LiveData.")
             workManager.getWorkInfosByTagLiveData(SYNC_WORK_TAG)
                 .observeForever(workInfosObserver)
         }

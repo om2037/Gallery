@@ -26,8 +26,7 @@ class MediaRepositoryImpl @Inject constructor(
     private val dao: MediaItemDao,
     @ApplicationContext private val context: Context,
     private val telegramClient: TelegramClient,
-    private val sessionManager: SessionManager,
-    private val fileLogger: FileLogger
+    private val sessionManager: SessionManager
 ) : MediaRepository {
 
     override fun getAllMediaItems(): Flow<List<MediaItem>> {
@@ -124,13 +123,13 @@ class MediaRepositoryImpl @Inject constructor(
     }
 
     override suspend fun syncMediaItems() {
-        fileLogger.log("MediaRepositoryImpl", "Entering syncMediaItems().")
+        FileLogger.log("MediaRepositoryImpl", "Entering syncMediaItems().")
         val workManager = WorkManager.getInstance(context)
         val syncWorkRequest = OneTimeWorkRequestBuilder<SyncWorker>()
             .addTag(SYNC_WORK_TAG)
             .build()
-        fileLogger.log("MediaRepositoryImpl", "Enqueuing SyncWorker with WorkManager.")
+        FileLogger.log("MediaRepositoryImpl", "Enqueuing SyncWorker with WorkManager.")
         workManager.enqueue(syncWorkRequest)
-        fileLogger.log("MediaRepositoryImpl", "SyncWorker enqueued.")
+        FileLogger.log("MediaRepositoryImpl", "SyncWorker enqueued.")
     }
 }

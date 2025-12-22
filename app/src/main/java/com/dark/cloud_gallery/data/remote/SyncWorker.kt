@@ -21,15 +21,14 @@ class SyncWorker @AssistedInject constructor(
     @Assisted workerParams: WorkerParameters,
     private val telegramClient: TelegramClient,
     private val sessionManager: SessionManager,
-    private val dao: MediaItemDao,
-    private val fileLogger: FileLogger
+    private val dao: MediaItemDao
 ) : CoroutineWorker(appContext, workerParams) {
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
-        fileLogger.log("SyncWorker", "Worker started.")
+        FileLogger.log("SyncWorker", "Worker started.")
         try {
             val channelId = sessionManager.getChannelId()?.toLongOrNull() ?: run {
-                fileLogger.log("SyncWorker", "Channel ID not found, stopping worker.")
+                FileLogger.log("SyncWorker", "Channel ID not found, stopping worker.")
                 return@withContext Result.failure()
             }
             val lastSyncTimestamp = sessionManager.getLastMediaSyncTimestamp()
@@ -42,15 +41,15 @@ class SyncWorker @AssistedInject constructor(
             var downloadedCount = 0
 
             do {
-                fileLogger.log("SyncWorker", "Fetching chat history from message ID: $fromMessageId")
+                FileLogger.log("SyncWorker", "Fetching chat history from message ID: $fromMessageId")
                 val messages = telegramClient.getChatHistory(channelId, fromMessageId)
                 val filteredMessages = messages.messages.filter { it.date.toLong() * 1000 > startTimestamp }
                 totalFound += filteredMessages.size
-                fileLogger.log("SyncWorker", "Found ${messages.messages.size} messages, ${filteredMessages.size} are new.")
+                FileLogger.log("SyncWorker", "Found ${messages.messages.size} messages, ${filteredMessages.size} are new.")
 
                 for (message in filteredMessages) {
                     try {
-                        fileLogger.log("SyncWorker", "Processing message ${message.id}")
+                        FileLogger.log("SyncWorker", "Processing message ${message.id}")
                         setProgressAsync(
                             Data.Builder()
                                 .putInt("total", totalFound)
@@ -94,7 +93,7 @@ class SyncWorker @AssistedInject constructor(
                         }
 
                         mediaItem?.let {
-                            fileLogger.log("SyncWorker", "Downloading and inserting media item for message ${message.id}")
+                            FileLogger.log("SyncWorker", "Downloading and inserting media item for message ${message.id}")
                             dao.insert(it)
                             downloadedCount++
                             if (it.timestamp > latestTimestamp) {
@@ -102,7 +101,7 @@ class SyncWorker @AssistedInject constructor(
                             }
                         }
                     } catch (e: Exception) {
-                        fileLogger.log("SyncWorker", "Failed to process message ${message.id}", e)
+                        FileLogger.log("SyncWorker", "Failed to process message ${message.id}", e)
                         continue
                     }
                 }
@@ -110,7 +109,7 @@ class SyncWorker @AssistedInject constructor(
             } while (messages.messages.isNotEmpty() && (filteredMessages.size == messages.messages.size))
 
             if (latestTimestamp > lastSyncTimestamp) {
-                fileLogger.log("SyncWorker", "Updating last sync timestamp to $latestTimestamp")
+                FileLogger.log("SyncWorker", "Updating last sync timestamp to $latestTimestamp")
                 sessionManager.saveLastMediaSyncTimestamp(latestTimestamp)
             }
 
@@ -121,10 +120,10 @@ class SyncWorker @AssistedInject constructor(
                     .putString("status", "Completed")
                     .build()
             )
-            fileLogger.log("SyncWorker", "Sync completed successfully. Found $totalFound items, downloaded $downloadedCount new items.")
+            FileLogger.log("SyncWorker", "Sync completed successfully. Found $totalFound items, downloaded $downloadedCount new items.")
             Result.success()
         } catch (e: Exception) {
-            fileLogger.log("SyncWorker", "Sync failed", e)
+            FileLogger.log("SyncWorker", "Sync failed", e)
             Result.failure()
         }
     }
