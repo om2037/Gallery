@@ -13,6 +13,10 @@ import com.dark.cloud_gallery.domain.repository.MediaRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
+import com.dark.cloud_gallery.data.remote.SyncWorker
+import com.dark.cloud_gallery.util.Constants.SYNC_WORK_TAG
 import org.drinkless.tdlib.TdApi
 import java.io.File
 import javax.inject.Inject
@@ -116,11 +120,6 @@ class MediaRepositoryImpl @Inject constructor(
         }
         emit(allBackups)
     }
-
-import androidx.work.OneTimeWorkRequestBuilder
-import androidx.work.WorkManager
-import com.dark.cloud_gallery.data.remote.SyncWorker
-import com.dark.cloud_gallery.util.Constants.SYNC_WORK_TAG
 
     override suspend fun syncMediaItems() {
         val workManager = WorkManager.getInstance(context)

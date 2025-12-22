@@ -10,6 +10,9 @@ import com.dark.cloud_gallery.domain.repository.MediaRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
+import androidx.lifecycle.Observer
+import androidx.work.WorkInfo
+import com.dark.cloud_gallery.util.Constants.SYNC_WORK_TAG
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.drinkless.tdlib.TdApi
@@ -70,10 +73,6 @@ class MainViewModel @Inject constructor(
             triggerSync()
         }
     }
-
-import androidx.lifecycle.Observer
-import androidx.work.WorkInfo
-import com.dark.cloud_gallery.util.Constants.SYNC_WORK_TAG
 
     private val workManager = WorkManager.getInstance(context)
     private val workInfosObserver = Observer<List<WorkInfo>> { workInfos ->
