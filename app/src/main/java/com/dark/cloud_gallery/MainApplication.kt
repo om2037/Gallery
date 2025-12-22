@@ -16,12 +16,8 @@ import javax.inject.Inject
 @HiltAndroidApp
 class MainApplication : Application() {
 
-    @Inject
-    lateinit var fileLogger: FileLogger
-
     override fun onCreate() {
         super.onCreate()
-        fileLogger.log("MainApplication", "Application starting up.")
         setupPeriodicSync()
     }
 
