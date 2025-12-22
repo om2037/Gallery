@@ -99,8 +99,11 @@ class MainViewModel @Inject constructor(
     }
 
     private fun triggerSync() {
+        fileLogger.log("MainViewModel", "Entering triggerSync().")
         viewModelScope.launch {
+            fileLogger.log("MainViewModel", "Coroutine for sync started. Calling mediaRepository.syncMediaItems().")
             mediaRepository.syncMediaItems()
+            fileLogger.log("MainViewModel", "Returned from syncMediaItems. Now observing WorkManager LiveData.")
             workManager.getWorkInfosByTagLiveData(SYNC_WORK_TAG)
                 .observeForever(workInfosObserver)
         }

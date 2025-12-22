@@ -17,6 +17,7 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import com.dark.cloud_gallery.data.remote.SyncWorker
 import com.dark.cloud_gallery.util.Constants.SYNC_WORK_TAG
+import com.dark.cloud_gallery.util.FileLogger
 import org.drinkless.tdlib.TdApi
 import java.io.File
 import javax.inject.Inject
@@ -25,7 +26,8 @@ class MediaRepositoryImpl @Inject constructor(
     private val dao: MediaItemDao,
     @ApplicationContext private val context: Context,
     private val telegramClient: TelegramClient,
-    private val sessionManager: SessionManager
+    private val sessionManager: SessionManager,
+    private val fileLogger: FileLogger
 ) : MediaRepository {
 
     override fun getAllMediaItems(): Flow<List<MediaItem>> {
@@ -122,10 +124,13 @@ class MediaRepositoryImpl @Inject constructor(
     }
 
     override suspend fun syncMediaItems() {
+        fileLogger.log("MediaRepositoryImpl", "Entering syncMediaItems().")
         val workManager = WorkManager.getInstance(context)
         val syncWorkRequest = OneTimeWorkRequestBuilder<SyncWorker>()
             .addTag(SYNC_WORK_TAG)
             .build()
+        fileLogger.log("MediaRepositoryImpl", "Enqueuing SyncWorker with WorkManager.")
         workManager.enqueue(syncWorkRequest)
+        fileLogger.log("MediaRepositoryImpl", "SyncWorker enqueued.")
     }
 }
