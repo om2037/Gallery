@@ -44,47 +44,62 @@ class SyncWorker @AssistedInject constructor(
                 totalFound += filteredMessages.size
 
                 for (message in filteredMessages) {
-                    setProgressAsync(
-                        Data.Builder()
-                            .putInt("total", totalFound)
-                            .putInt("downloaded", downloadedCount)
-                            .putString("status", "Downloading...")
-                            .build()
-                    )
+                    try {
+                        setProgressAsync(
+                            Data.Builder()
+                                .putInt("total", totalFound)
+                                .putInt("downloaded", downloadedCount)
+                                .putString("status", "Downloading...")
+                                .build()
+                        )
 
-                    val content = message.content
-                    val mediaItem: MediaItem? = when (content) {
-                        is TdApi.MessagePhoto -> {
-                            val photo = content.photo.sizes.last().photo
-                            val file = telegramClient.downloadFile(photo.id)
-                            MediaItem(
-                                telegramMessageId = message.id,
-                                filePath = file.local.path,
-                                deviceModel = content.caption.text,
-                                timestamp = message.date.toLong() * 1000,
-                                mediaType = "photo"
-                            )
+                        val content = message.content
+                        val captionText = when (content) {
+                            is TdApi.MessagePhoto -> content.caption.text
+                            is TdApi.MessageVideo -> content.caption.text
+                            else -> null
                         }
-                        is TdApi.MessageVideo -> {
-                            val video = content.video.video
-                            val file = telegramClient.downloadFile(video.id)
-                            MediaItem(
-                                telegramMessageId = message.id,
-                                filePath = file.local.path,
-                                deviceModel = content.caption.text,
-                                timestamp = message.date.toLong() * 1000,
-                                mediaType = "video"
-                            )
-                        }
-                        else -> null
-                    }
 
-                    mediaItem?.let {
-                        dao.insert(it)
-                        downloadedCount++
-                        if (it.timestamp > latestTimestamp) {
-                            latestTimestamp = it.timestamp
+                        if (captionText.isNullOrBlank()) {
+                            continue
                         }
+
+                        val mediaItem: MediaItem? = when (content) {
+                            is TdApi.MessagePhoto -> {
+                                val photo = content.photo.sizes.maxByOrNull { it.width * it.height }?.photo ?: continue
+                                val file = telegramClient.downloadFile(photo.id)
+                                MediaItem(
+                                    telegramMessageId = message.id,
+                                    filePath = file.local.path,
+                                    deviceModel = captionText,
+                                    timestamp = message.date.toLong() * 1000,
+                                    mediaType = "photo"
+                                )
+                            }
+                            is TdApi.MessageVideo -> {
+                                val video = content.video.video
+                                val file = telegramClient.downloadFile(video.id)
+                                MediaItem(
+                                    telegramMessageId = message.id,
+                                    filePath = file.local.path,
+                                    deviceModel = captionText,
+                                    timestamp = message.date.toLong() * 1000,
+                                    mediaType = "video"
+                                )
+                            }
+                            else -> null
+                        }
+
+                        mediaItem?.let {
+                            dao.insert(it)
+                            downloadedCount++
+                            if (it.timestamp > latestTimestamp) {
+                                latestTimestamp = it.timestamp
+                            }
+                        }
+                    } catch (e: Exception) {
+                        // Ignore message if it fails to process, preventing a crash.
+                        continue
                     }
                 }
                 fromMessageId = messages.messages.lastOrNull()?.id ?: 0
