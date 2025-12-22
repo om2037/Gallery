@@ -38,6 +38,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.ui.unit.dp
 import com.dark.cloud_gallery.ui.MainViewModel
 import com.dark.cloud_gallery.ui.features.gallery.GalleryScreen
 import com.dark.cloud_gallery.ui.features.sms.SmsScreen
@@ -93,9 +95,6 @@ fun MainScreen(
                     }
                 }
             }
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.ui.unit.dp
-
         ) { innerPadding ->
             Column(modifier = Modifier.padding(innerPadding)) {
                 syncProgress?.let { progress ->
