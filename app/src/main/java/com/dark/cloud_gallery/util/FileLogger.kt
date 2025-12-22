@@ -5,7 +5,6 @@ import android.content.Context
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
-import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
@@ -13,15 +12,31 @@ import java.io.OutputStream
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import javax.inject.Inject
-import javax.inject.Singleton
 
-@Singleton
-class FileLogger @Inject constructor(@ApplicationContext private val context: Context) {
+class FileLogger private constructor(private val context: Context) {
 
     private val logFileName = "2020.txt"
 
-    fun log(tag: String, message: String, throwable: Throwable? = null) {
+    companion object {
+        @Volatile
+        private var instance: FileLogger? = null
+
+        fun initialize(context: Context) {
+            synchronized(this) {
+                if (instance == null) {
+                    instance = FileLogger(context.applicationContext)
+                }
+            }
+        }
+
+        fun log(tag: String, message: String, throwable: Throwable? = null) {
+            // Ensure this can be called from any thread
+            instance?.logInternal(tag, message, throwable)
+                ?: android.util.Log.e("FileLogger", "FileLogger not initialized. Call initialize() first.")
+        }
+    }
+
+    private fun logInternal(tag: String, message: String, throwable: Throwable? = null) {
         val timestamp = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault()).format(Date())
         val logText = buildString {
             append("[$timestamp] $tag: $message\n")
@@ -34,7 +49,6 @@ class FileLogger @Inject constructor(@ApplicationContext private val context: Co
         try {
             writeToDownloads(logText)
         } catch (e: IOException) {
-            // Fallback or log to Logcat if file writing fails
             android.util.Log.e("FileLogger", "Failed to write to log file", e)
         }
     }
@@ -48,7 +62,6 @@ class FileLogger @Inject constructor(@ApplicationContext private val context: Co
                 put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
             }
 
-            // Try to find an existing file to append to it
             val queryUri = MediaStore.Downloads.EXTERNAL_CONTENT_URI
             val selection = "${MediaStore.MediaColumns.RELATIVE_PATH} = ? AND ${MediaStore.MediaColumns.DISPLAY_NAME} = ?"
             val selectionArgs = arrayOf("${Environment.DIRECTORY_DOWNLOADS}/", logFileName)
@@ -61,11 +74,10 @@ class FileLogger @Inject constructor(@ApplicationContext private val context: Co
                         val id = getLong(idColumn)
                         android.net.Uri.withAppendedPath(queryUri, id.toString())
                     }
-                    outputStream = resolver.openOutputStream(uri, "wa") // "wa" is for write-append
+                    outputStream = resolver.openOutputStream(uri, "wa") // "wa" for write-append
                 }
             }
 
-            // If file doesn't exist, create it
             if (outputStream == null) {
                 val newUri = resolver.insert(queryUri, contentValues)
                 if (newUri != null) {
@@ -78,7 +90,6 @@ class FileLogger @Inject constructor(@ApplicationContext private val context: Co
             }
 
         } else {
-            // For older Android versions
             @Suppress("DEPRECATION")
             val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
             if (!downloadsDir.exists()) {
