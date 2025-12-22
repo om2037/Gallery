@@ -1,7 +1,5 @@
 package com.dark.cloud_gallery.data.remote
 
-import android.content.Context
-import android.util.Log
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.Data
@@ -9,6 +7,7 @@ import androidx.work.WorkerParameters
 import com.dark.cloud_gallery.data.local.MediaItemDao
 import com.dark.cloud_gallery.data.local.SessionManager
 import com.dark.cloud_gallery.domain.model.MediaItem
+import com.dark.cloud_gallery.util.FileLogger
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.Dispatchers
@@ -21,7 +20,8 @@ class SyncWorker @AssistedInject constructor(
     @Assisted workerParams: WorkerParameters,
     private val telegramClient: TelegramClient,
     private val sessionManager: SessionManager,
-    private val dao: MediaItemDao
+    private val dao: MediaItemDao,
+    private val fileLogger: FileLogger
 ) : CoroutineWorker(appContext, workerParams) {
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
@@ -93,7 +93,7 @@ class SyncWorker @AssistedInject constructor(
                             }
                         }
                     } catch (e: Exception) {
-                        Log.e("SyncWorker", "Failed to process message ${message.id}", e)
+                        fileLogger.log("SyncWorker", "Failed to process message ${message.id}", e)
                         continue
                     }
                 }
@@ -113,7 +113,7 @@ class SyncWorker @AssistedInject constructor(
             )
             Result.success()
         } catch (e: Exception) {
-            Log.e("SyncWorker", "Sync failed", e)
+            fileLogger.log("SyncWorker", "Sync failed", e)
             Result.failure()
         }
     }
