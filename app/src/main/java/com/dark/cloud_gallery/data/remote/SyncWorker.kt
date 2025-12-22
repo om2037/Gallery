@@ -26,8 +26,12 @@ class SyncWorker @AssistedInject constructor(
 ) : CoroutineWorker(appContext, workerParams) {
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
+        fileLogger.log("SyncWorker", "Worker started.")
         try {
-            val channelId = sessionManager.getChannelId()?.toLongOrNull() ?: return@withContext Result.failure()
+            val channelId = sessionManager.getChannelId()?.toLongOrNull() ?: run {
+                fileLogger.log("SyncWorker", "Channel ID not found, stopping worker.")
+                return@withContext Result.failure()
+            }
             val lastSyncTimestamp = sessionManager.getLastMediaSyncTimestamp()
             val syncStartDate = sessionManager.getSyncStartDate()
             val startTimestamp = if (lastSyncTimestamp > 0) lastSyncTimestamp else syncStartDate
@@ -38,12 +42,15 @@ class SyncWorker @AssistedInject constructor(
             var downloadedCount = 0
 
             do {
+                fileLogger.log("SyncWorker", "Fetching chat history from message ID: $fromMessageId")
                 val messages = telegramClient.getChatHistory(channelId, fromMessageId)
                 val filteredMessages = messages.messages.filter { it.date.toLong() * 1000 > startTimestamp }
                 totalFound += filteredMessages.size
+                fileLogger.log("SyncWorker", "Found ${messages.messages.size} messages, ${filteredMessages.size} are new.")
 
                 for (message in filteredMessages) {
                     try {
+                        fileLogger.log("SyncWorker", "Processing message ${message.id}")
                         setProgressAsync(
                             Data.Builder()
                                 .putInt("total", totalFound)
@@ -87,6 +94,7 @@ class SyncWorker @AssistedInject constructor(
                         }
 
                         mediaItem?.let {
+                            fileLogger.log("SyncWorker", "Downloading and inserting media item for message ${message.id}")
                             dao.insert(it)
                             downloadedCount++
                             if (it.timestamp > latestTimestamp) {
@@ -102,6 +110,7 @@ class SyncWorker @AssistedInject constructor(
             } while (messages.messages.isNotEmpty() && (filteredMessages.size == messages.messages.size))
 
             if (latestTimestamp > lastSyncTimestamp) {
+                fileLogger.log("SyncWorker", "Updating last sync timestamp to $latestTimestamp")
                 sessionManager.saveLastMediaSyncTimestamp(latestTimestamp)
             }
 
@@ -112,6 +121,7 @@ class SyncWorker @AssistedInject constructor(
                     .putString("status", "Completed")
                     .build()
             )
+            fileLogger.log("SyncWorker", "Sync completed successfully. Found $totalFound items, downloaded $downloadedCount new items.")
             Result.success()
         } catch (e: Exception) {
             fileLogger.log("SyncWorker", "Sync failed", e)

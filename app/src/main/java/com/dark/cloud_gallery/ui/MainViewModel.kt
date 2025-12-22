@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import androidx.lifecycle.Observer
 import androidx.work.WorkInfo
 import com.dark.cloud_gallery.util.Constants.SYNC_WORK_TAG
+import com.dark.cloud_gallery.util.FileLogger
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.drinkless.tdlib.TdApi
@@ -29,7 +30,8 @@ class MainViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val telegramClient: TelegramClient,
     private val sessionManager: SessionManager,
-    private val mediaRepository: MediaRepository
+    private val mediaRepository: MediaRepository,
+    private val fileLogger: FileLogger
 ) : ViewModel() {
 
     private val _authState = MutableStateFlow<AuthState>(AuthState.Loading)
@@ -68,13 +70,16 @@ class MainViewModel @Inject constructor(
     }
 
     fun saveSyncStartDate(dateMillis: Long?) {
+        fileLogger.log("MainViewModel", "Sync from date button clicked.")
         dateMillis?.let {
+            fileLogger.log("MainViewModel", "Date selected: $it. Triggering sync.")
             sessionManager.saveSyncStartDate(it)
             triggerSync()
         }
     }
 
     fun triggerImmediateSync() {
+        fileLogger.log("MainViewModel", "Immediate sync button clicked. Triggering sync.")
         triggerSync()
     }
 

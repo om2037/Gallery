@@ -9,13 +9,19 @@ import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import com.dark.cloud_gallery.data.remote.SyncWorker
+import com.dark.cloud_gallery.util.FileLogger
 import java.util.concurrent.TimeUnit
+import javax.inject.Inject
 
 @HiltAndroidApp
 class MainApplication : Application() {
 
+    @Inject
+    lateinit var fileLogger: FileLogger
+
     override fun onCreate() {
         super.onCreate()
+        fileLogger.log("MainApplication", "Application starting up.")
         setupPeriodicSync()
     }
 
