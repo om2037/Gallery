@@ -2,6 +2,8 @@ package com.dark.cloud_gallery.data.local
 
 import android.content.Context
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -11,12 +13,16 @@ class SessionManager @Inject constructor(
 ) {
     private val prefs = context.getSharedPreferences("session", Context.MODE_PRIVATE)
 
+    private val _loggedInState = MutableStateFlow(isLoggedIn())
+    val loggedInStateFlow = _loggedInState.asStateFlow()
+
     fun isLoggedIn(): Boolean {
         return prefs.getBoolean("is_logged_in", false)
     }
 
     fun setLoggedIn(isLoggedIn: Boolean) {
         prefs.edit().putBoolean("is_logged_in", isLoggedIn).apply()
+        _loggedInState.value = isLoggedIn
     }
 
     fun saveApiCredentials(apiId: String, apiHash: String) {

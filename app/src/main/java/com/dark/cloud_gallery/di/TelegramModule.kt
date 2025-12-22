@@ -1,20 +1,24 @@
 package com.dark.cloud_gallery.di
 
+import android.content.Context
 import com.dark.cloud_gallery.data.remote.TelegramClient
 import com.dark.cloud_gallery.data.remote.TelegramClientImpl
-import dagger.Binds
 import dagger.Module
+import dagger.Provides
 import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
-abstract class TelegramModule {
+object TelegramModule {
 
-    @Binds
+    @Provides
     @Singleton
-    abstract fun bindTelegramClient(
-        telegramClientImpl: TelegramClientImpl
-    ): TelegramClient
+    fun provideTelegramClient(
+        @ApplicationContext context: Context
+    ): TelegramClient {
+        return TelegramClientImpl(context)
+    }
 }

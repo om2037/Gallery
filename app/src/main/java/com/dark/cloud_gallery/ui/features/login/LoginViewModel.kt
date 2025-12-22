@@ -22,28 +22,40 @@ class LoginViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            telegramClient.getAuthorizationStateFlow().collect {
-                when (it) {
-                    is TdApi.AuthorizationStateReady -> {
-                        _uiState.value = LoginUiState.Success
-                        sessionManager.setLoggedIn(true)
-                    }
-                    is TdApi.AuthorizationStateWaitCode -> _uiState.value = LoginUiState.WaitingForCode
-                    is TdApi.AuthorizationStateWaitPassword -> _uiState.value = LoginUiState.WaitingForPassword
-                    is TdApi.AuthorizationStateWaitPhoneNumber -> _uiState.value = LoginUiState.WaitingForPhoneNumber
-                    is TdApi.AuthorizationStateClosed -> _uiState.value = LoginUiState.Error("Authentication failed")
-                    else -> _uiState.value = LoginUiState.Loading
-                }
-            }
+            // No need to initialize here, it will be done on demand
         }
     }
 
     fun sendAuthCode(apiId: String, apiHash: String, phoneNumber: String, channelId: String) {
         viewModelScope.launch {
             _uiState.value = LoginUiState.Loading
+            telegramClient.initialize()
             sessionManager.saveApiCredentials(apiId, apiHash)
             sessionManager.saveChannelId(channelId)
             telegramClient.sendAuthenticationCode(apiId, apiHash, phoneNumber)
+            // Start collecting the auth state flow AFTER initialization
+            telegramClient.getAuthorizationStateFlow().collect {
+                when (it) {
+                    is TdApi.AuthorizationStateReady -> {
+                        _uiState.value = LoginUiState.Success
+                        sessionManager.setLoggedIn(true)
+                    }
+
+                    is TdApi.AuthorizationStateWaitCode -> _uiState.value =
+                        LoginUiState.WaitingForCode
+
+                    is TdApi.AuthorizationStateWaitPassword -> _uiState.value =
+                        LoginUiState.WaitingForPassword
+
+                    is TdApi.AuthorizationStateWaitPhoneNumber -> _uiState.value =
+                        LoginUiState.WaitingForPhoneNumber
+
+                    is TdApi.AuthorizationStateClosed -> _uiState.value =
+                        LoginUiState.Error("Authentication failed")
+
+                    else -> _uiState.value = LoginUiState.Loading
+                }
+            }
         }
     }
 

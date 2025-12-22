@@ -7,10 +7,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.Sms
 import androidx.compose.material.icons.filled.Sync
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.NavigationBar
@@ -36,6 +38,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.ui.unit.dp
 import com.dark.cloud_gallery.ui.MainViewModel
 import com.dark.cloud_gallery.ui.features.gallery.GalleryScreen
 import com.dark.cloud_gallery.ui.features.sms.SmsScreen
@@ -50,7 +54,7 @@ fun MainScreen(
     val items = listOf("gallery", "sms")
     var showDatePicker by remember { mutableStateOf(false) }
     val datePickerState = rememberDatePickerState()
-    val isSyncing by viewModel.isSyncing.collectAsState()
+    val syncProgress by viewModel.syncProgress.collectAsState()
 
     Box(Modifier.fillMaxSize()) {
         Scaffold(
@@ -92,18 +96,28 @@ fun MainScreen(
                 }
             }
         ) { innerPadding ->
-            NavHost(
-                bottomNavController,
-                startDestination = "gallery",
-                Modifier.padding(innerPadding)
-            ) {
-                composable("gallery") { GalleryScreen(navController) }
-                composable("sms") { SmsScreen(navController) }
+            Column(modifier = Modifier.padding(innerPadding)) {
+                syncProgress?.let { progress ->
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        LinearProgressIndicator(
+                            progress = if (progress.total > 0) progress.downloaded.toFloat() / progress.total else 0f,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Text(text = "${progress.downloaded} / ${progress.total} - ${progress.status}")
+                    }
+                }
+                NavHost(
+                    bottomNavController,
+                    startDestination = "gallery",
+                ) {
+                    composable("gallery") { GalleryScreen(navController) }
+                    composable("sms") { SmsScreen(navController) }
+                }
             }
-        }
-
-        if (isSyncing) {
-            CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
         }
 
         if (showDatePicker) {
