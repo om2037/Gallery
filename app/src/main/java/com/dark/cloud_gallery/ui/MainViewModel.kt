@@ -1,19 +1,29 @@
 package com.dark.cloud_gallery.ui
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.work.WorkManager
 import com.dark.cloud_gallery.data.local.SessionManager
 import com.dark.cloud_gallery.data.remote.TelegramClient
 import com.dark.cloud_gallery.domain.repository.MediaRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.drinkless.tdlib.TdApi
 import javax.inject.Inject
 
+data class SyncProgress(
+    val total: Int = 0,
+    val downloaded: Int = 0,
+    val status: String = ""
+)
+
 @HiltViewModel
 class MainViewModel @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val telegramClient: TelegramClient,
     private val sessionManager: SessionManager,
     private val mediaRepository: MediaRepository
@@ -22,8 +32,8 @@ class MainViewModel @Inject constructor(
     private val _authState = MutableStateFlow<AuthState>(AuthState.Loading)
     val authState = _authState.asStateFlow()
 
-    private val _isSyncing = MutableStateFlow(false)
-    val isSyncing = _isSyncing.asStateFlow()
+    private val _syncProgress = MutableStateFlow<SyncProgress?>(null)
+    val syncProgress = _syncProgress.asStateFlow()
 
     init {
         viewModelScope.launch {
@@ -61,16 +71,36 @@ class MainViewModel @Inject constructor(
         }
     }
 
+import androidx.lifecycle.Observer
+import androidx.work.WorkInfo
+import com.dark.cloud_gallery.util.Constants.SYNC_WORK_TAG
+
+    private val workManager = WorkManager.getInstance(context)
+    private val workInfosObserver = Observer<List<WorkInfo>> { workInfos ->
+        val workInfo = workInfos.firstOrNull() ?: return@Observer
+        if (workInfo.state.isFinished) {
+            _syncProgress.value = null
+        } else {
+            val progress = workInfo.progress
+            _syncProgress.value = SyncProgress(
+                total = progress.getInt("total", 0),
+                downloaded = progress.getInt("downloaded", 0),
+                status = progress.getString("status") ?: ""
+            )
+        }
+    }
+
     private fun triggerSync() {
         viewModelScope.launch {
-            _isSyncing.value = true
-            try {
-                mediaRepository.syncMediaItems()
-                // Also refresh SMS backups, though it's a flow that should update automatically
-                // Forcing a refresh could be done here if needed
-            } finally {
-                _isSyncing.value = false
-            }
+            mediaRepository.syncMediaItems()
+            workManager.getWorkInfosByTagLiveData(SYNC_WORK_TAG)
+                .observeForever(workInfosObserver)
         }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        workManager.getWorkInfosByTagLiveData(SYNC_WORK_TAG)
+            .removeObserver(workInfosObserver)
     }
 }

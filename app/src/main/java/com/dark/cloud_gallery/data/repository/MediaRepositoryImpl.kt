@@ -117,59 +117,16 @@ class MediaRepositoryImpl @Inject constructor(
         emit(allBackups)
     }
 
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
+import com.dark.cloud_gallery.data.remote.SyncWorker
+import com.dark.cloud_gallery.util.Constants.SYNC_WORK_TAG
+
     override suspend fun syncMediaItems() {
-        val channelId = sessionManager.getChannelId()?.toLongOrNull() ?: return
-        val lastSyncTimestamp = sessionManager.getLastMediaSyncTimestamp()
-        val syncStartDate = sessionManager.getSyncStartDate()
-        val startTimestamp = if (lastSyncTimestamp > 0) lastSyncTimestamp else syncStartDate
-
-        var fromMessageId: Long = 0
-        var latestTimestamp = lastSyncTimestamp
-
-        do {
-            val messages = telegramClient.getChatHistory(channelId, fromMessageId)
-            val filteredMessages = messages.messages.filter { it.date.toLong() * 1000 > startTimestamp }
-
-            for (message in filteredMessages) {
-                val content = message.content
-                val mediaItem: MediaItem? = when (content) {
-                    is TdApi.MessagePhoto -> {
-                        val photo = content.photo.sizes.last().photo
-                        val file = telegramClient.downloadFile(photo.id)
-                        MediaItem(
-                            telegramMessageId = message.id,
-                            filePath = file.local.path,
-                            deviceModel = content.caption.text, // Assuming caption is device model
-                            timestamp = message.date.toLong() * 1000,
-                            mediaType = "photo"
-                        )
-                    }
-                    is TdApi.MessageVideo -> {
-                        val video = content.video.video
-                        val file = telegramClient.downloadFile(video.id)
-                        MediaItem(
-                            telegramMessageId = message.id,
-                            filePath = file.local.path,
-                            deviceModel = content.caption.text, // Assuming caption is device model
-                            timestamp = message.date.toLong() * 1000,
-                            mediaType = "video"
-                        )
-                    }
-                    else -> null
-                }
-
-                mediaItem?.let {
-                    dao.insert(it)
-                    if (it.timestamp > latestTimestamp) {
-                        latestTimestamp = it.timestamp
-                    }
-                }
-            }
-            fromMessageId = messages.messages.lastOrNull()?.id ?: 0
-        } while (messages.messages.isNotEmpty() && (filteredMessages.size == messages.messages.size))
-
-        if (latestTimestamp > lastSyncTimestamp) {
-            sessionManager.saveLastMediaSyncTimestamp(latestTimestamp)
-        }
+        val workManager = WorkManager.getInstance(context)
+        val syncWorkRequest = OneTimeWorkRequestBuilder<SyncWorker>()
+            .addTag(SYNC_WORK_TAG)
+            .build()
+        workManager.enqueue(syncWorkRequest)
     }
 }
