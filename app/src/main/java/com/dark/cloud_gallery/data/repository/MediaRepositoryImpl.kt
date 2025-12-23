@@ -8,8 +8,8 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import com.dark.cloud_gallery.data.local.MediaItemDao
 import com.dark.cloud_gallery.data.local.SessionManager
+import com.dark.cloud_gallery.data.remote.SyncWorker
 import com.dark.cloud_gallery.data.remote.TelegramClient
-import com.dark.cloud_gallery.data.remote.TestWorker
 import com.dark.cloud_gallery.domain.model.MediaItem
 import com.dark.cloud_gallery.domain.model.SmsBackup
 import com.dark.cloud_gallery.domain.repository.MediaRepository
@@ -125,11 +125,11 @@ class MediaRepositoryImpl @Inject constructor(
     override suspend fun syncMediaItems() {
         FileLogger.log("MediaRepositoryImpl", "Entering syncMediaItems().")
         val workManager = WorkManager.getInstance(context)
-        val testWorkRequest = OneTimeWorkRequestBuilder<TestWorker>()
+        val syncWorkRequest = OneTimeWorkRequestBuilder<SyncWorker>()
             .addTag(SYNC_WORK_TAG)
             .build()
-        FileLogger.log("MediaRepositoryImpl", "Enqueuing TestWorker with WorkManager.")
-        workManager.enqueue(testWorkRequest)
-        FileLogger.log("MediaRepositoryImpl", "TestWorker enqueued.")
+        FileLogger.log("MediaRepositoryImpl", "Enqueuing SyncWorker with WorkManager.")
+        workManager.enqueue(syncWorkRequest)
+        FileLogger.log("MediaRepositoryImpl", "SyncWorker enqueued.")
     }
 }
