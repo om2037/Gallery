@@ -4,20 +4,20 @@ import android.content.ContentValues
 import android.content.Context
 import android.os.Build
 import android.provider.MediaStore
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
 import com.dark.cloud_gallery.data.local.MediaItemDao
 import com.dark.cloud_gallery.data.local.SessionManager
 import com.dark.cloud_gallery.data.remote.TelegramClient
+import com.dark.cloud_gallery.data.remote.TestWorker
 import com.dark.cloud_gallery.domain.model.MediaItem
 import com.dark.cloud_gallery.domain.model.SmsBackup
 import com.dark.cloud_gallery.domain.repository.MediaRepository
+import com.dark.cloud_gallery.util.Constants.SYNC_WORK_TAG
+import com.dark.cloud_gallery.util.FileLogger
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
-import androidx.work.OneTimeWorkRequestBuilder
-import androidx.work.WorkManager
-import com.dark.cloud_gallery.data.remote.SyncWorker
-import com.dark.cloud_gallery.util.Constants.SYNC_WORK_TAG
-import com.dark.cloud_gallery.util.FileLogger
 import org.drinkless.tdlib.TdApi
 import java.io.File
 import javax.inject.Inject
@@ -125,11 +125,11 @@ class MediaRepositoryImpl @Inject constructor(
     override suspend fun syncMediaItems() {
         FileLogger.log("MediaRepositoryImpl", "Entering syncMediaItems().")
         val workManager = WorkManager.getInstance(context)
-        val syncWorkRequest = OneTimeWorkRequestBuilder<SyncWorker>()
+        val testWorkRequest = OneTimeWorkRequestBuilder<TestWorker>()
             .addTag(SYNC_WORK_TAG)
             .build()
-        FileLogger.log("MediaRepositoryImpl", "Enqueuing SyncWorker with WorkManager.")
-        workManager.enqueue(syncWorkRequest)
-        FileLogger.log("MediaRepositoryImpl", "SyncWorker enqueued.")
+        FileLogger.log("MediaRepositoryImpl", "Enqueuing TestWorker with WorkManager.")
+        workManager.enqueue(testWorkRequest)
+        FileLogger.log("MediaRepositoryImpl", "TestWorker enqueued.")
     }
 }
