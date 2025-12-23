@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PhotoLibrary
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Sms
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.foundation.layout.Arrangement
@@ -30,6 +32,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import androidx.navigation.NavDestination.Companion.hierarchy
@@ -55,6 +58,7 @@ fun MainScreen(
     var showDatePicker by remember { mutableStateOf(false) }
     val datePickerState = rememberDatePickerState()
     val syncProgress by viewModel.syncProgress.collectAsState()
+    val context = LocalContext.current
 
     Box(Modifier.fillMaxSize()) {
         Scaffold(
@@ -62,8 +66,14 @@ fun MainScreen(
                 TopAppBar(
                     title = { Text("Cloud Gallery") },
                     actions = {
+                        IconButton(onClick = { viewModel.shareLogFile(context) }) {
+                            Icon(Icons.Filled.Share, contentDescription = "Share Log")
+                        }
+                        IconButton(onClick = { viewModel.triggerImmediateSync() }) {
+                            Icon(Icons.Filled.Refresh, contentDescription = "Sync Now")
+                        }
                         IconButton(onClick = { showDatePicker = true }) {
-                            Icon(Icons.Filled.Sync, contentDescription = "Sync")
+                            Icon(Icons.Filled.Sync, contentDescription = "Sync from Date")
                         }
                     }
                 )
