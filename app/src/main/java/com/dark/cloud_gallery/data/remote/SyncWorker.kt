@@ -4,7 +4,6 @@ import android.content.Context
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
-import com.dark.cloud_gallery.data.local.MediaItemDao
 import com.dark.cloud_gallery.data.local.SessionManager
 import com.dark.cloud_gallery.util.FileLogger
 import dagger.assisted.Assisted
@@ -16,20 +15,20 @@ import kotlinx.coroutines.withContext
 class SyncWorker @AssistedInject constructor(
     @Assisted appContext: Context,
     @Assisted workerParams: WorkerParameters,
-    private val sessionManager: SessionManager,
-    private val dao: MediaItemDao
+    private val sessionManager: SessionManager
+    // private val dao: MediaItemDao,
     // private val telegramClient: TelegramClient
 ) : CoroutineWorker(appContext, workerParams) {
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
-        FileLogger.log("SyncWorker", "Worker started successfully (with SessionManager and Dao).")
+        FileLogger.log("SyncWorker", "Worker started successfully (with SessionManager only).")
 
         // Original logic is temporarily commented out.
         /*
         try {
             val channelId = sessionManager.getChannelId()?.toLongOrNull() ?: run {
                 FileLogger.log("SyncWorker", "Channel ID not found, stopping worker.")
-                return@with-context Result.failure()
+                return@withContext Result.failure()
             }
             // ... rest of the original code
         } catch (e: Exception) {
