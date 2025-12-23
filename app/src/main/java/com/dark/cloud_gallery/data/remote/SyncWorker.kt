@@ -1,30 +1,31 @@
 package com.dark.cloud_gallery.data.remote
 
 import android.content.Context
-import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.Data
 import androidx.work.WorkerParameters
-import com.dark.cloud_gallery.data.local.MediaItemDao
-import com.dark.cloud_gallery.data.local.SessionManager
+import com.dark.cloud_gallery.di.SyncWorkerEntryPoint
 import com.dark.cloud_gallery.domain.model.MediaItem
 import com.dark.cloud_gallery.util.FileLogger
-import dagger.assisted.Assisted
-import dagger.assisted.AssistedInject
+import dagger.hilt.android.EntryPointAccessors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.drinkless.tdlib.TdApi
 
-@HiltWorker
-class SyncWorker @AssistedInject constructor(
-    @Assisted appContext: Context,
-    @Assisted workerParams: WorkerParameters,
-    private val telegramClient: TelegramClient,
-    private val sessionManager: SessionManager,
-    private val dao: MediaItemDao
+class SyncWorker(
+    appContext: Context,
+    workerParams: WorkerParameters,
 ) : CoroutineWorker(appContext, workerParams) {
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
+        val entryPoint = EntryPointAccessors.fromApplication(
+            applicationContext,
+            SyncWorkerEntryPoint::class.java
+        )
+        val telegramClient = entryPoint.telegramClient()
+        val sessionManager = entryPoint.sessionManager()
+        val dao = entryPoint.mediaItemDao()
+
         FileLogger.log("SyncWorker", "Worker started.")
         try {
             val channelId = sessionManager.getChannelId()?.toLongOrNull() ?: run {
@@ -50,7 +51,7 @@ class SyncWorker @AssistedInject constructor(
                 for (message in filteredMessages) {
                     try {
                         FileLogger.log("SyncWorker", "Processing message ${message.id}")
-                        setProgressAsync(
+                        setProgress(
                             Data.Builder()
                                 .putInt("total", totalFound)
                                 .putInt("downloaded", downloadedCount)
@@ -113,7 +114,7 @@ class SyncWorker @AssistedInject constructor(
                 sessionManager.saveLastMediaSyncTimestamp(latestTimestamp)
             }
 
-            setProgressAsync(
+            setProgress(
                 Data.Builder()
                     .putInt("total", totalFound)
                     .putInt("downloaded", downloadedCount)
