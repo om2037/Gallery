@@ -9,7 +9,6 @@ import androidx.work.CoroutineWorker
 import androidx.work.Data
 import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
-import com.dark.cloud_gallery.R
 import com.dark.cloud_gallery.di.SyncWorkerEntryPoint
 import com.dark.cloud_gallery.domain.model.MediaItem
 import com.dark.cloud_gallery.util.FileLogger
@@ -168,7 +167,7 @@ class SyncWorker(
             .setContentTitle(title)
             .setTicker(title)
             .setContentText(progress)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setOngoing(true)
 
         if (total > 0) {
