@@ -164,18 +164,18 @@ class SyncWorker(
 
     private fun createForegroundInfo(progress: String, downloaded: Int = 0, total: Int = 0): ForegroundInfo {
         val title = "Syncing Media"
-        val notification = NotificationCompat.Builder(appContext, CHANNEL_ID)
+        val notificationBuilder = NotificationCompat.Builder(appContext, CHANNEL_ID)
             .setContentTitle(title)
             .setTicker(title)
             .setContentText(progress)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setOngoing(true)
-            .also {
-                if (total > 0) {
-                    it.setProgress(total, downloaded, false)
-                }
-            }
-            .build()
+
+        if (total > 0) {
+            notificationBuilder.setProgress(total, downloaded, false)
+        }
+
+        val notification = notificationBuilder.build()
 
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             ForegroundInfo(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
