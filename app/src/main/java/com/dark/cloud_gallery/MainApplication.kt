@@ -1,6 +1,10 @@
 package com.dark.cloud_gallery
 
 import android.app.Application
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.content.Context
+import android.os.Build
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import androidx.work.Constraints
@@ -42,7 +46,22 @@ class MainApplication : Application(), Configuration.Provider {
             defaultUncaughtExceptionHandler?.uncaughtException(thread, throwable)
         }
 
+        createNotificationChannel()
         setupPeriodicSync()
+    }
+
+    private fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val name = "SyncChannel"
+            val descriptionText = "Channel for background sync notifications"
+            val importance = NotificationManager.IMPORTANCE_LOW
+            val channel = NotificationChannel("sync_channel_id", name, importance).apply {
+                description = descriptionText
+            }
+            val notificationManager: NotificationManager =
+                getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            notificationManager.createNotificationChannel(channel)
+        }
     }
 
     private fun setupPeriodicSync() {

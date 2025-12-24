@@ -28,6 +28,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
@@ -59,8 +60,9 @@ fun MediaDetailScreen(
                     .padding(padding)
             ) {
                 AsyncImage(
-                    model = item.filePath,
+                    model = "file://${item.filePath}",
                     contentDescription = null,
+                    contentScale = ContentScale.Fit,
                     modifier = Modifier.fillMaxSize().zoomable(zoomState)
                 )
 
