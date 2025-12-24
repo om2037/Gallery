@@ -1,10 +1,9 @@
 package com.dark.cloud_gallery.ui.features.gallery
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material3.Text
@@ -25,33 +24,30 @@ fun GalleryScreen(
     val groupedMediaItems by viewModel.groupedMediaItems.collectAsState()
     val sortedDates = groupedMediaItems.keys.sortedDescending()
 
-    LazyColumn(modifier = Modifier.padding(8.dp)) {
-        items(sortedDates.size) { index ->
-            val date = sortedDates[index]
+    LazyVerticalGrid(
+        columns = GridCells.Adaptive(minSize = 100.dp),
+        modifier = Modifier.padding(8.dp),
+    ) {
+        sortedDates.forEach { date ->
             val itemsForDate = groupedMediaItems[date] ?: emptyList()
 
-            Column(modifier = Modifier.padding(bottom = 16.dp)) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
                 Text(
                     text = date,
-                    modifier = Modifier.padding(start = 4.dp, bottom = 8.dp)
+                    modifier = Modifier.padding(start = 4.dp, top = 16.dp, bottom = 8.dp)
                 )
-                LazyVerticalGrid(
-                    columns = GridCells.Adaptive(minSize = 100.dp),
-                    modifier = Modifier.padding(horizontal = 4.dp),
-                    userScrollEnabled = false // Important for nested scrolling
-                ) {
-                    items(itemsForDate) { item ->
-                        AsyncImage(
-                            model = item.filePath,
-                            contentDescription = null,
-                            modifier = Modifier
-                                .padding(4.dp)
-                                .clickable {
-                                    navController.navigate("mediaDetail/${item.id}")
-                                }
-                        )
-                    }
-                }
+            }
+
+            items(itemsForDate) { item ->
+                AsyncImage(
+                    model = item.filePath,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .padding(4.dp)
+                        .clickable {
+                            navController.navigate("mediaDetail/${item.id}")
+                        }
+                )
             }
         }
     }

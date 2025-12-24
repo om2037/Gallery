@@ -28,6 +28,7 @@ class SyncWorker(
 
         FileLogger.log("SyncWorker", "Worker started.")
         try {
+            telegramClient.initialize()
             val channelId = sessionManager.getChannelId()?.toLongOrNull() ?: run {
                 FileLogger.log("SyncWorker", "Channel ID not found, stopping worker.")
                 return@withContext Result.failure()
