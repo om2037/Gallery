@@ -43,7 +43,7 @@ fun GalleryScreen(
 
             items(itemsForDate) { item ->
                 AsyncImage(
-                    model = item.filePath,
+                    model = "file://${item.filePath}",
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier

@@ -1,9 +1,15 @@
 package com.dark.cloud_gallery.data.remote
 
+import android.app.Notification
 import android.content.Context
+import android.content.pm.ServiceInfo
+import android.os.Build
+import androidx.core.app.NotificationCompat
 import androidx.work.CoroutineWorker
 import androidx.work.Data
+import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
+import com.dark.cloud_gallery.R
 import com.dark.cloud_gallery.di.SyncWorkerEntryPoint
 import com.dark.cloud_gallery.domain.model.MediaItem
 import com.dark.cloud_gallery.util.FileLogger
@@ -11,11 +17,17 @@ import dagger.hilt.android.EntryPointAccessors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.drinkless.tdlib.TdApi
+import java.util.UUID
 
 class SyncWorker(
-    appContext: Context,
+    private val appContext: Context,
     workerParams: WorkerParameters,
 ) : CoroutineWorker(appContext, workerParams) {
+
+    companion object {
+        const val NOTIFICATION_ID = 1
+        const val CHANNEL_ID = "sync_channel_id"
+    }
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         val entryPoint = EntryPointAccessors.fromApplication(
@@ -28,7 +40,9 @@ class SyncWorker(
 
         FileLogger.log("SyncWorker", "Worker started.")
         try {
+            setForeground(createForegroundInfo("Starting sync..."))
             telegramClient.initialize()
+
             val channelId = sessionManager.getChannelId()?.toLongOrNull() ?: run {
                 FileLogger.log("SyncWorker", "Channel ID not found, stopping worker.")
                 return@withContext Result.failure()
@@ -42,21 +56,31 @@ class SyncWorker(
             var totalFound = 0
             var downloadedCount = 0
 
-            do {
+            while (true) {
                 FileLogger.log("SyncWorker", "Fetching chat history from message ID: $fromMessageId")
-                val messages = telegramClient.getChatHistory(channelId, fromMessageId)
-                val filteredMessages = messages.messages.filter { it.date.toLong() * 1000 > startTimestamp }
-                totalFound += filteredMessages.size
-                FileLogger.log("SyncWorker", "Found ${messages.messages.size} messages, ${filteredMessages.size} are new.")
+                setForeground(createForegroundInfo("Fetching messages... Found: $totalFound", downloadedCount, totalFound))
 
-                for (message in filteredMessages) {
+                val messages = telegramClient.getChatHistory(channelId, fromMessageId)
+                if (messages.messages.isEmpty()) {
+                    FileLogger.log("SyncWorker", "No more messages found. Exiting loop.")
+                    break
+                }
+
+                val newMessages = messages.messages.filter { it.date.toLong() * 1000 > startTimestamp }
+                totalFound += newMessages.size
+
+                FileLogger.log("SyncWorker", "Found ${messages.messages.size} total messages, ${newMessages.size} are new.")
+
+                for (message in newMessages) {
                     try {
                         FileLogger.log("SyncWorker", "Processing message ${message.id}")
+                        val statusMessage = "Downloading ${downloadedCount + 1} of $totalFound..."
+                        setForeground(createForegroundInfo(statusMessage, downloadedCount + 1, totalFound))
                         setProgress(
                             Data.Builder()
                                 .putInt("total", totalFound)
                                 .putInt("downloaded", downloadedCount)
-                                .putString("status", "Downloading...")
+                                .putString("status", statusMessage)
                                 .build()
                         )
 
@@ -67,11 +91,11 @@ class SyncWorker(
                             else -> ""
                         }).ifBlank { "Unknown Device" }
 
-
                         val mediaItem: MediaItem? = when (content) {
                             is TdApi.MessagePhoto -> {
                                 val photo = content.photo.sizes.maxByOrNull { it.width * it.height }?.photo ?: continue
                                 val file = telegramClient.downloadFile(photo.id)
+                                FileLogger.log("SyncWorker", "File downloaded to: ${file.local.path}")
                                 MediaItem(
                                     telegramMessageId = message.id,
                                     filePath = file.local.path,
@@ -83,6 +107,7 @@ class SyncWorker(
                             is TdApi.MessageVideo -> {
                                 val video = content.video.video
                                 val file = telegramClient.downloadFile(video.id)
+                                FileLogger.log("SyncWorker", "File downloaded to: ${file.local.path}")
                                 MediaItem(
                                     telegramMessageId = message.id,
                                     filePath = file.local.path,
@@ -95,7 +120,7 @@ class SyncWorker(
                         }
 
                         mediaItem?.let {
-                            FileLogger.log("SyncWorker", "Downloading and inserting media item for message ${message.id}")
+                            FileLogger.log("SyncWorker", "Inserting media item for message ${message.id}")
                             dao.insert(it)
                             downloadedCount++
                             if (it.timestamp > latestTimestamp) {
@@ -107,14 +132,21 @@ class SyncWorker(
                         continue
                     }
                 }
+
                 fromMessageId = messages.messages.lastOrNull()?.id ?: 0
-            } while (messages.messages.isNotEmpty() && (filteredMessages.size == messages.messages.size))
+                if (fromMessageId == 0L || newMessages.size < messages.messages.size) {
+                    FileLogger.log("SyncWorker", "Reached end of new messages. Exiting loop.")
+                    break
+                }
+            }
 
             if (latestTimestamp > lastSyncTimestamp) {
                 FileLogger.log("SyncWorker", "Updating last sync timestamp to $latestTimestamp")
                 sessionManager.saveLastMediaSyncTimestamp(latestTimestamp)
             }
 
+            val finalStatus = "Sync completed. Downloaded $downloadedCount new items."
+            setForeground(createForegroundInfo(finalStatus))
             setProgress(
                 Data.Builder()
                     .putInt("total", totalFound)
@@ -127,6 +159,28 @@ class SyncWorker(
         } catch (e: Exception) {
             FileLogger.log("SyncWorker", "Sync failed", e)
             Result.failure()
+        }
+    }
+
+    private fun createForegroundInfo(progress: String, downloaded: Int = 0, total: Int = 0): ForegroundInfo {
+        val title = "Syncing Media"
+        val notification = NotificationCompat.Builder(appContext, CHANNEL_ID)
+            .setContentTitle(title)
+            .setTicker(title)
+            .setContentText(progress)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setOngoing(true)
+            .also {
+                if (total > 0) {
+                    it.setProgress(total, downloaded, false)
+                }
+            }
+            .build()
+
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            ForegroundInfo(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
+        } else {
+            ForegroundInfo(NOTIFICATION_ID, notification)
         }
     }
 }

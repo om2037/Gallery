@@ -60,7 +60,7 @@ fun MediaDetailScreen(
                     .padding(padding)
             ) {
                 AsyncImage(
-                    model = item.filePath,
+                    model = "file://${item.filePath}",
                     contentDescription = null,
                     contentScale = ContentScale.Fit,
                     modifier = Modifier.fillMaxSize().zoomable(zoomState)
